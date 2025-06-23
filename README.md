@@ -104,7 +104,44 @@ pnpm format:check
 # 타입 체크
 
 pnpm type-check
+
+# CI 전체 실행 (로컬 테스트)
+
+pnpm ci
 \`\`\`
+
+## ⚙️ CI/CD 파이프라인
+
+이 프로젝트는 GitHub Actions를 사용하여 완전 자동화된 CI/CD 파이프라인을 구축했습니다.
+
+### 설정된 워크플로우
+
+- **CI (Continuous Integration)**: 코드 품질 검사, 타입 체크, 테스트, 빌드
+- **CD (Continuous Deployment)**: Vercel 자동 배포
+- **PR Check**: PR 제목 검증, 크기 제한, 자동 리뷰어 할당
+- **CodeQL Security**: 보안 취약점 분석
+- **Dependabot**: 의존성 자동 업데이트
+
+### 필요한 GitHub Secrets
+
+CI/CD가 정상 작동하려면 다음 Secrets를 GitHub 저장소에 설정해야 합니다:
+
+\`\`\`
+
+# Supabase
+
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
+# Vercel (자동 배포용)
+
+VERCEL_TOKEN=your_vercel_token
+VERCEL_ORG_ID=your_vercel_org_id
+VERCEL_PROJECT_ID=your_vercel_project_id
+\`\`\`
+
+자세한 설정 가이드는 [GitHub Actions 설정 가이드](./docs/github-actions-setup.md)를 참고하세요.
 
 ## 📁 프로젝트 구조
 

@@ -11,7 +11,14 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky install",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "echo \"Tests will be added in next phase\"",
+    "test:unit": "echo \"Unit tests will be added in next phase\"",
+    "test:integration": "echo \"Integration tests will be added in next phase\"",
+    "test:e2e": "echo \"E2E tests will be added in next phase\"",
+    "test:watch": "echo \"Test watch mode will be added in next phase\"",
+    "ci": "pnpm run lint && pnpm run type-check && pnpm run test:unit && pnpm run build",
+    "vercel-build": "next build"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.3",

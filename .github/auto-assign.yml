@@ -1,0 +1,20 @@
+# Auto-assign configuration for reviewers
+addReviewers: false
+addAssignees: false
+
+# Review settings
+reviewers:
+  - dominicchukwu
+
+# Assignment settings
+assignees:
+  - dominicchukwu
+
+# Number of reviewers to add randomly
+numberOfReviewers: 1
+numberOfAssignees: 1
+
+# Skip keywords
+skipKeywords:
+  - wip
+  - draft
