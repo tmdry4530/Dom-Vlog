@@ -1,0 +1,185 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+```markdown
+# Technical Requirements Document (TRD)
+
+## 1. Executive Technical Summary
+- **프로젝트 개요**  
+  “Dom vlog”는 AI가 자동으로 글 가독성·SEO·카테고리를 최적화해 주는 개인 → 멀티사용자 기술 블로그 플랫폼이다. 초기(Phase 1)는 단일 사용자를 위한 Monorepo-Monolith 구조로 빠른 배포와 비용 최소화를 달성하고, 이후(Phase 2)는 멀티테넌트 확장을 위해 모듈 단위 수평 확장 전략을 적용한다.
+
+- **핵심 기술 스택**  
+  • Frontend: Next.js 15(App Router) + Shadcn UI + Tailwind CSS + Lucide Icons  
+  • Backend/API: Next.js API Route(tRPC) + Supabase(PostgreSQL) + Prisma  
+  • AI: Vercel AI SDK + LangChain + Gemini-2.5-flash-lite  
+  • DevOps & Hosting: Vercel(웹) + Supabase(DB·Storage) + Cloudflare CDN + GitHub Actions(CI/CD)
+
+- **주요 기술 목표**  
+  ① 페이지 TTFB ≤ 150 ms, ② 게시→배포 3 초(Phase 1)/5 초(Phase 2) 이내,  
+  ③ 가용성 99.5 %(Phase 1) → 99.9 %(Phase 2), ④ AI 호출 실패율 < 1 %.
+
+- **핵심 가정**  
+  • 초기 트래픽 ≤ 10 RPS, 6 개월 내 500 RPS까지 단계적 상승.  
+  • Vercel 무료-→Pro 플랜 전환으로도 예산 범위 내.  
+  • Supabase Postgres 싱글 인스턴스로도 100 명 MAU 지원 가능(Phase 1).  
+  • AI 호출 비용은 캐싱·레이트리밋으로 월 20 USD 이하 유지.
+
+---
+
+## 2. Technology Stack Architecture
+### Frontend Technology Stack
+| 영역 | 선택 기술 & 버전 | 비고 |
+|------|-----------------|------|
+| Core Framework | Next.js 15 (React 18) | App Router+ISR |
+| State Management | React Context + zustand | 약식 글로벌 상태 |
+| Routing | Nested Route Segment (App Router) | 동적 slug 대응 |
+| UI/UX | Shadcn UI + Tailwind CSS + Radix UI | 다크모드 내장 |
+| Forms & Validation | react-hook-form + zod | 타입 안전 |
+| Build Tools | Turbopack(Next 내장) + ESLint + Prettier | CI서 Lint/GitHub Action |
+
+### Backend Technology Stack
+| 영역 | 선택 기술 | 비고 |
+|------|-----------|------|
+| Runtime | Node.js 20(LTS) | V8 기반 |
+| API Framework | tRPC (Next.js API Route) | 타입 안전 RPC |
+| API Pattern | RPC over HTTP(JSON) | 서버리스 최적 |
+| Validation | zod schema 공유 | FE/BE 동일 사용 |
+| Middleware | next-logger, rate-limit (Upstash) | 감사·보안 로그 |
+
+### Database & Persistence Layer
+| 항목 | 내용 |
+|------|------|
+| Primary DB | Supabase PostgreSQL (13+) |
+| Schema Design | Phase 1: 단일 테넌트 스키마 posts, categories, seo_scores<br>Phase 2: users, blogs, posts, categories (blog_id FK) |
+| ORM | Prisma 5 | 타입 안전, 마이그레이션 내장 |
+| Caching | Cloudflare CDN(정적)/Supabase Realtime cache(DB) |
+| Migration | prisma migrate + GitHub Action 자동 적용 |
+| Backup & Recovery | Supabase 자동 스냅샷(일 1회) + WAL 아카이브 |
+
+### Infrastructure & DevOps
+| 항목 | 내용 |
+|------|------|
+| Hosting | Vercel(Next.js) + Supabase(Managed Postgres & Storage) |
+| Containerization | 불필요(서버리스). CI용 Dockerfile만 제공 |
+| CI/CD | GitHub Actions → Vercel Preview/Prod • Prisma Migrate • Lighthouse CI |
+| Monitoring | Vercel Analytics + Supabase Studio + Sentry(Error) |
+| Logging | next-logger + Supabase Logs + Sentry Tracing |
+
+---
+
+## 3. System Architecture Design
+
+### Code Organization & Convention
+- **도메인 기준 레이어링**: `blog` / `ai` / `user` / `admin` Bounded Context.
+- **Layer-Based**:  
+  Presentation(Next Page/React) → Application(tRPC Router) → Domain(Services, Entities) → Infrastructure(Prisma, API clients).
+- **공유 모듈**: `@/lib/{ui,utils,types}` 전역 재사용.
+
+### Universal File & Folder Structure
+```
+dom-vlog/
+├── apps/
+│   └── web/                # Next.js 15
+│       ├── src/
+│       │   ├── app/        # App Router routes
+│       │   ├── components/
+│       │   ├── features/
+│       │   │   ├── ai/
+│       │   │   ├── blog/
+│       │   │   ├── seo/
+│       │   │   └── user/
+│       │   ├── lib/
+│       │   │   ├── trpc/
+│       │   │   ├── prisma/
+│       │   │   └── ai/
+│       │   └── styles/
+│       └── package.json
+├── prisma/
+│   ├── schema.prisma
+│   └── migrations/
+├── .github/
+│   └── workflows/
+├── docs/
+└── turbo.json
+```
+
+### High-Level System Architecture
+- **패턴**: 모놀리식 코드베이스(Next.js Full-stack) + 모듈러 도메인.  
+- **컴포넌트**:  
+  Client(Next.js) ←→ tRPC API (Node.js) ←→ Prisma ←→ Supabase DB  
+  AI Service(Gemini) · SEO API(Ahrefs) · Lighthouse CI는 API 레이어에서 호출.  
+- **스케일링**: Vercel 서버리스 함수 수평 확장; Supabase 읽기 Replica 추가(Phase 2).  
+- **로드밸런싱**: Vercel 글로벌 Edge Network.  
+- **Fault Tolerance**: Retry/backoff, Circuit-Breaker(axios-retry).
+
+### Data Flow & Communication Patterns
+1. 글 작성 → `POST /trpc/post.save` → DB 저장.
+2. 저장 후 Webhook → AI 파이프라인(코드블록 포맷·SEO 분석) → 결과를 `post_ai_enhanced` 테이블에 기록.
+3. 페이지 조회 시 ISR(Incremental Static Regeneration) + CDN 캐시.
+4. 멀티사용자(Phase 2): JWT(Clerk) ↔ tRPC Context → Row Level Security in Supabase.
+
+---
+
+## 4. Performance & Optimization Strategy
+- ISR + Cloudflare CDN으로 정적 페이지 Global Edge 캐싱.
+- tRPC 요청에 HTTP/2 Keep-Alive 적용, 응답 gzip-br 압축.
+- AI 응답 캐싱(Redis@Upstash) : 동일 본문 해시 24 h 캐시로 비용 절감.
+- Prisma connection pooling(Supabase pgbouncer)로 DB 연결 최적화.
+
+---
+
+## 5. Development Standards & Practices
+- **코딩 규칙**: Airbnb TypeScript Style + Prettier 자동포맷, Husky pre-commit.
+- **코드리뷰**: PR → 2 인 승인, ESLint/TSC/Lighthouse CI 통과 후 머지.
+- **테스트**: Vitest(Unit) + Playwright(E2E) + Prisma Test DB(Shadow).  
+- **문서화**: Storybook(컴포넌트) + tRPC OpenAPI plugin → Swagger UI.  
+- **에러 처리**: tRPC errorFormatter + Sentry + 유저 친화 Toast.
+
+---
+
+## 6. Implementation Roadmap & Milestones
+### Phase 1: Foundation (M0–M3)
+| 월 | 산출물 |
+|----|---------|
+| M0 | Monorepo 셋업, 기본 글 CRUD, Supabase DB 스키마 |
+| M1 | AI 스타일링 파이프라인, Vercel AI SDK 통합, 80점 가독성 달성 |
+| M2 | SEO 모듈(Ahrefs API) + 카테고리 추천, Lighthouse CI 배치 |
+| M3 | 개인 블로그 MVP 배포, 성능 지표 검증 |
+
+### Phase 2: Feature Enhancement (M4–M7)
+| 월 | 산출물 |
+|----|---------|
+| M4 | 멀티 사용자 Auth(Clerk), 테넌시 DB 마이그레이션 |
+| M5 | 사용자 대시보드(트래픽·SEO 시각화), 테마 커스터마이징 |
+| M6 | 관리자 패널, 수익화 모듈(AdSense) |
+| M7 | 99.9 % 가용성 목표, 읽기 Replica + Upstash Redis 캐시 |
+
+### Phase 3: Scaling & Optimization (M8+)
+| 월 | 산출물 |
+|----|---------|
+| M8 | 모바일 앱(React Native Expo) 프리뷰, Edge Cache 최적화 |
+| M9 | 플러그인 마켓, 협업 기능, 글로벌 다국어 지원 |
+| M10 | 규제 대응(GDPR), 감사 로그, 엔터프라이즈 플랜 |
+
+---
+
+## 7. Risk Assessment & Mitigation Strategies
+### Technical Risks
+| 위험 | 영향 | 완화책 |
+|------|------|--------|
+| AI 출력 부정확 | UX 저하 | 유저 피드백 루프 + 수동 편집 옵션 |
+| Supabase 단일 노드 장애 | 가용성 하락 | 일일 백업 + 읽기 Replica, Region Failover 계획 |
+| API 비용 급증 | OPEX 상승 | 캐싱·Rate-Limit·Batch 호출 |
+
+### Project Delivery Risks
+| 위험 | 영향 | 대응 |
+|------|------|------|
+| 일정 지연 | 마일스톤 미달 | Kanban + 주간 버퍼 10 % |
+| 인력 부족 | 품질 저하 | 모듈별 외주 대비, 우선순위 재조정 |
+| 배포 장애 | 서비스 다운 | Blue-Green 배포, 롤백 스크립트 |
+
+---
+
+```

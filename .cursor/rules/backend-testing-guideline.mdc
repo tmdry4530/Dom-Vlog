@@ -1,0 +1,582 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Backend Testing Guidelines
+
+## Testing Philosophy and Core Principles
+
+### ✅ DO: Focus on Business Logic and API Contract Testing
+- Test **business rules and domain logic**
+- Verify **API contracts and data transformations**
+- Ensure **data integrity and consistency**
+- Validate **error handling and edge cases**
+
+### ❌ DON'T: Test Framework Internals
+- Avoid testing ORM or framework behavior
+- Don't test third-party library functionality
+- Skip testing basic CRUD operations without business logic
+
+```javascript
+// ❌ Testing framework internals
+test('should save user to database', async () => {
+  const user = new User({ name: 'John' })
+  await user.save()
+  expect(user.id).toBeDefined()
+})
+
+// ✅ Business logic testing
+test('should create user with encrypted password', async () => {
+  // Given
+  const userData = { email: 'john@example.com', password: 'plaintext' }
+  
+  // When
+  const user = await userService.createUser(userData)
+  
+  // Then
+  expect(user.password).not.toBe('plaintext')
+  expect(bcrypt.compareSync('plaintext', user.password)).toBe(true)
+})
+```
+
+---
+
+## Architecture and Design
+
+### ✅ DO: Layer-Based Testing Strategy
+- **Controller Layer**: Test HTTP request/response handling
+- **Service Layer**: Test business logic and workflows
+- **Repository Layer**: Test data access patterns
+- **Integration**: Test component interactions
+
+### ✅ DO: Design for Testability
+- Use **dependency injection** for external services
+- Separate **pure functions** from side effects
+- Design **clear interfaces** between layers
+
+```javascript
+// ✅ Testable service design
+class UserService {
+  constructor(userRepository, emailService, logger) {
+    this.userRepository = userRepository
+    this.emailService = emailService
+    this.logger = logger
+  }
+  
+  async createUser(userData) {
+    // Validate business rules
+    if (!this.isValidEmail(userData.email)) {
+      throw new ValidationError('Invalid email format')
+    }
+    
+    // Create user
+    const user = await this.userRepository.create({
+      ...userData,
+      password: await this.hashPassword(userData.password)
+    })
+    
+    // Send welcome email
+    await this.emailService.sendWelcomeEmail(user)
+    
+    this.logger.info('User created', { userId: user.id })
+    return user
+  }
+  
+  // Pure function - easily testable
+  isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  }
+}
+```
+
+---
+
+## Test Writing Methodology
+
+### ✅ DO: Use AAA (Arrange-Act-Assert) Pattern
+```javascript
+test('should create user with valid data', async () => {
+  // Arrange
+  const userData = {
+    email: 'john@example.com',
+    password: 'password123',
+    name: 'John Doe'
+  }
+  const mockRepository = {
+    create: jest.fn().mockResolvedValue({ id: 1, ...userData })
+  }
+  const mockEmailService = {
+    sendWelcomeEmail: jest.fn().mockResolvedValue(true)
+  }
+  const userService = new UserService(mockRepository, mockEmailService, console)
+  
+  // Act
+  const result = await userService.createUser(userData)
+  
+  // Assert
+  expect(result.id).toBe(1)
+  expect(mockRepository.create).toHaveBeenCalledWith({
+    ...userData,
+    password: expect.not.stringMatching('password123')
+  })
+  expect(mockEmailService.sendWelcomeEmail).toHaveBeenCalledWith(result)
+})
+```
+
+### ✅ DO: Test Error Scenarios
+```javascript
+test('should throw ValidationError for invalid email', async () => {
+  // Arrange
+  const userData = { email: 'invalid-email', password: 'password123' }
+  const userService = new UserService(mockRepository, mockEmailService, console)
+  
+  // Act & Assert
+  await expect(userService.createUser(userData))
+    .rejects
+    .toThrow(ValidationError)
+})
+
+test('should handle database connection failure', async () => {
+  // Arrange
+  const mockRepository = {
+    create: jest.fn().mockRejectedValue(new Error('Database connection failed'))
+  }
+  const userService = new UserService(mockRepository, mockEmailService, console)
+  
+  // Act & Assert
+  await expect(userService.createUser(validUserData))
+    .rejects
+    .toThrow('Database connection failed')
+})
+```
+
+---
+
+## Test Type Guidelines
+
+### Unit Testing
+
+#### ✅ DO: Test Business Logic in Isolation
+```javascript
+describe('UserService', () => {
+  test('should validate user age for premium features', () => {
+    // Given
+    const userService = new UserService()
+    const user = { age: 17 }
+    
+    // When
+    const canAccessPremium = userService.canAccessPremiumFeatures(user)
+    
+    // Then
+    expect(canAccessPremium).toBe(false)
+  })
+  
+  test('should calculate subscription fee with discount', () => {
+    // Given
+    const userService = new UserService()
+    const user = { type: 'student', subscriptionMonths: 12 }
+    
+    // When
+    const fee = userService.calculateSubscriptionFee(user)
+    
+    // Then
+    expect(fee).toBe(480) // 50 * 12 * 0.8 (20% student discount)
+  })
+})
+```
+
+#### ✅ DO: Test Data Validation and Transformation
+```javascript
+describe('DataValidator', () => {
+  test('should sanitize user input', () => {
+    // Given
+    const validator = new DataValidator()
+    const input = { name: '  John Doe  ', email: 'JOHN@EXAMPLE.COM' }
+    
+    // When
+    const sanitized = validator.sanitizeUserInput(input)
+    
+    // Then
+    expect(sanitized.name).toBe('John Doe')
+    expect(sanitized.email).toBe('john@example.com')
+  })
+})
+```
+
+### Integration Testing
+
+#### ✅ DO: Test API Endpoints End-to-End
+```javascript
+describe('POST /api/users', () => {
+  test('should create user and return 201', async () => {
+    // Given
+    const userData = {
+      email: 'john@example.com',
+      password: 'password123',
+      name: 'John Doe'
+    }
+    
+    // When
+    const response = await request(app)
+      .post('/api/users')
+      .send(userData)
+      .expect(201)
+    
+    // Then
+    expect(response.body.id).toBeDefined()
+    expect(response.body.email).toBe(userData.email)
+    expect(response.body.password).toBeUndefined() // Should not return password
+    
+    // Verify user was actually created in database
+    const createdUser = await User.findById(response.body.id)
+    expect(createdUser).toBeTruthy()
+  })
+  
+  test('should return 400 for invalid email', async () => {
+    // Given
+    const invalidUserData = {
+      email: 'invalid-email',
+      password: 'password123'
+    }
+    
+    // When & Then
+    const response = await request(app)
+      .post('/api/users')
+      .send(invalidUserData)
+      .expect(400)
+    
+    expect(response.body.error).toContain('Invalid email')
+  })
+})
+```
+
+#### ✅ DO: Test Database Operations
+```javascript
+describe('UserRepository', () => {
+  beforeEach(async () => {
+    await setupTestDatabase()
+  })
+  
+  afterEach(async () => {
+    await cleanupTestDatabase()
+  })
+  
+  test('should find user by email', async () => {
+    // Given
+    const userData = { email: 'john@example.com', name: 'John' }
+    const createdUser = await User.create(userData)
+    const repository = new UserRepository()
+    
+    // When
+    const foundUser = await repository.findByEmail('john@example.com')
+    
+    // Then
+    expect(foundUser.id).toBe(createdUser.id)
+    expect(foundUser.email).toBe(userData.email)
+  })
+})
+```
+
+### ❌ DON'T: Overuse Certain Test Types
+
+#### Avoid Testing External Services Directly
+```javascript
+// ❌ Don't test external services
+test('should send email via SendGrid', async () => {
+  const response = await sendgrid.send(emailData)
+  expect(response.statusCode).toBe(202)
+})
+
+// ✅ Mock external services
+test('should send welcome email after user creation', async () => {
+  const mockEmailService = {
+    send: jest.fn().mockResolvedValue({ success: true })
+  }
+  
+  await userService.createUser(userData)
+  
+  expect(mockEmailService.send).toHaveBeenCalledWith({
+    to: userData.email,
+    template: 'welcome'
+  })
+})
+```
+
+---
+
+## Testing Strategies by Layer
+
+### Controller Layer Testing
+```javascript
+describe('UserController', () => {
+  test('should handle user creation request', async () => {
+    // Given
+    const mockUserService = {
+      createUser: jest.fn().mockResolvedValue({ id: 1, email: 'john@example.com' })
+    }
+    const controller = new UserController(mockUserService)
+    const req = { body: { email: 'john@example.com', password: 'password123' } }
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() }
+    
+    // When
+    await controller.createUser(req, res)
+    
+    // Then
+    expect(res.status).toHaveBeenCalledWith(201)
+    expect(res.json).toHaveBeenCalledWith({ id: 1, email: 'john@example.com' })
+  })
+})
+```
+
+### Middleware Testing
+```javascript
+describe('AuthMiddleware', () => {
+  test('should authenticate valid JWT token', async () => {
+    // Given
+    const validToken = jwt.sign({ userId: 1 }, process.env.JWT_SECRET)
+    const req = { headers: { authorization: `Bearer ${validToken}` } }
+    const res = {}
+    const next = jest.fn()
+    
+    // When
+    await authMiddleware(req, res, next)
+    
+    // Then
+    expect(req.user).toEqual({ userId: 1 })
+    expect(next).toHaveBeenCalled()
+  })
+  
+  test('should return 401 for invalid token', async () => {
+    // Given
+    const req = { headers: { authorization: 'Bearer invalid-token' } }
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() }
+    const next = jest.fn()
+    
+    // When
+    await authMiddleware(req, res, next)
+    
+    // Then
+    expect(res.status).toHaveBeenCalledWith(401)
+    expect(next).not.toHaveBeenCalled()
+  })
+})
+```
+
+---
+
+## Database Testing Best Practices
+
+### ✅ DO: Use Test Database
+```javascript
+// Setup test database configuration
+const testConfig = {
+  database: process.env.TEST_DATABASE_URL,
+  logging: false, // Disable logging in tests
+  pool: { max: 1, min: 1 } // Minimize connections
+}
+
+// Database setup and teardown
+beforeAll(async () => {
+  await sequelize.sync({ force: true })
+})
+
+afterAll(async () => {
+  await sequelize.close()
+})
+
+beforeEach(async () => {
+  await cleanDatabase()
+})
+```
+
+### ✅ DO: Test Database Constraints and Relationships
+```javascript
+test('should enforce unique email constraint', async () => {
+  // Given
+  const userData = { email: 'john@example.com', name: 'John' }
+  await User.create(userData)
+  
+  // When & Then
+  await expect(User.create(userData))
+    .rejects
+    .toThrow('email must be unique')
+})
+
+test('should cascade delete user posts', async () => {
+  // Given
+  const user = await User.create({ email: 'john@example.com' })
+  await Post.create({ title: 'Test Post', userId: user.id })
+  
+  // When
+  await user.destroy()
+  
+  // Then
+  const posts = await Post.findAll({ where: { userId: user.id } })
+  expect(posts).toHaveLength(0)
+})
+```
+
+---
+
+## Mock and Stub Strategies
+
+### ✅ DO: Mock External Dependencies
+```javascript
+// Mock external services
+jest.mock('../services/emailService', () => ({
+  sendEmail: jest.fn().mockResolvedValue({ success: true }),
+  sendWelcomeEmail: jest.fn().mockResolvedValue({ success: true })
+}))
+
+// Mock database for unit tests
+jest.mock('../models/User', () => ({
+  create: jest.fn(),
+  findOne: jest.fn(),
+  findAll: jest.fn()
+}))
+```
+
+### ✅ DO: Use Factory Pattern for Test Data
+```javascript
+// Test data factories
+const UserFactory = {
+  build: (overrides = {}) => ({
+    email: 'john@example.com',
+    name: 'John Doe',
+    password: 'hashedpassword',
+    createdAt: new Date(),
+    ...overrides
+  }),
+  
+  create: async (overrides = {}) => {
+    const userData = UserFactory.build(overrides)
+    return await User.create(userData)
+  }
+}
+
+// Usage in tests
+test('should update user profile', async () => {
+  const user = await UserFactory.create({ name: 'Original Name' })
+  // Test logic here
+})
+```
+
+---
+
+## Performance and Load Testing Considerations
+
+### ✅ DO: Test Critical Path Performance
+```javascript
+test('should handle user creation within acceptable time', async () => {
+  // Given
+  const userData = { email: 'john@example.com', password: 'password123' }
+  
+  // When
+  const startTime = Date.now()
+  await userService.createUser(userData)
+  const endTime = Date.now()
+  
+  // Then
+  const executionTime = endTime - startTime
+  expect(executionTime).toBeLessThan(1000) // Should complete within 1 second
+})
+```
+
+### ✅ DO: Test Database Query Efficiency
+```javascript
+test('should not trigger N+1 query problem', async () => {
+  // Given
+  await Promise.all([
+    UserFactory.create(),
+    UserFactory.create(),
+    UserFactory.create()
+  ])
+  
+  // When
+  const queryCount = await captureQueryCount(async () => {
+    const users = await User.findAll({
+      include: [{ model: Post }]
+    })
+    // Access related data
+    users.forEach(user => user.Posts.length)
+  })
+  
+  // Then
+  expect(queryCount).toBeLessThanOrEqual(2) // 1 for users, 1 for posts
+})
+```
+
+---
+
+## Security Testing
+
+### ✅ DO: Test Input Validation and Sanitization
+```javascript
+test('should prevent SQL injection', async () => {
+  // Given
+  const maliciousInput = "'; DROP TABLE users; --"
+  
+  // When & Then
+  await expect(userService.findByName(maliciousInput))
+    .not.toThrow()
+  
+  // Verify users table still exists
+  const users = await User.findAll()
+  expect(users).toBeDefined()
+})
+
+test('should sanitize XSS attempts', () => {
+  // Given
+  const xssInput = '<script>alert("xss")</script>'
+  
+  // When
+  const sanitized = userService.sanitizeInput(xssInput)
+  
+  // Then
+  expect(sanitized).not.toContain('<script>')
+  expect(sanitized).not.toContain('alert')
+})
+```
+
+### ✅ DO: Test Authentication and Authorization
+```javascript
+test('should deny access to protected route without token', async () => {
+  // When
+  const response = await request(app)
+    .get('/api/users/profile')
+    .expect(401)
+  
+  // Then
+  expect(response.body.error).toBe('Authentication required')
+})
+
+test('should deny access to admin route for regular user', async () => {
+  // Given
+  const userToken = generateTokenForUser({ id: 1, role: 'user' })
+  
+  // When
+  const response = await request(app)
+    .get('/api/admin/users')
+    .set('Authorization', `Bearer ${userToken}`)
+    .expect(403)
+  
+  // Then
+  expect(response.body.error).toBe('Insufficient permissions')
+})
+```
+
+---
+
+## Core Principles Summary
+
+1. **Business Logic First**: Focus on testing business rules and domain logic
+2. **Layer Isolation**: Test each layer independently with appropriate mocks
+3. **Data Integrity**: Ensure data consistency and constraint validation
+4. **Error Handling**: Test all error scenarios and edge cases
+5. **Security**: Validate input sanitization and access controls
+6. **Performance**: Test critical paths for acceptable response times
+
+---
+
+**Remember**: Backend testing is about ensuring **reliable, secure, and performant** services. Focus on business value, data integrity, and system reliability rather than code coverage metrics.

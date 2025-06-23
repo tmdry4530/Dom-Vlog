@@ -1,0 +1,251 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# 디렉토리 구조 가이드
+
+## 개요
+Dom vlog 프로젝트는 AI 기능이 내장된 개인 기술 블로그 플랫폼으로, Next.js 15(App Router)와 Supabase를 기반으로 구성됩니다. 이 문서는 프로젝트의 디렉토리 구조와 파일 조직 규칙을 정의합니다.
+
+## 루트 디렉토리 구조
+
+```
+DomVlog/
+├── .cursor/                    # Cursor 설정 및 규칙
+├── .vooster/                   # Vooster AI 프로젝트 관리
+├── app/                        # Next.js 15 App Router
+├── components/                 # 재사용 가능한 React 컴포넌트
+├── lib/                        # 유틸리티 및 설정
+├── public/                     # 정적 파일
+├── styles/                     # 스타일시트
+├── types/                      # TypeScript 타입 정의
+├── hooks/                      # 커스텀 React 훅
+├── ai/                         # AI 관련 기능
+├── supabase/                   # Supabase 설정 및 마이그레이션
+├── tests/                      # 테스트 파일
+├── docs/                       # 프로젝트 문서
+├── .env.local                  # 환경 변수
+├── next.config.js              # Next.js 설정
+├── package.json                # 패키지 의존성
+├── tailwind.config.js          # Tailwind CSS 설정
+├── tsconfig.json               # TypeScript 설정
+└── README.md                   # 프로젝트 개요
+```
+
+## 세부 디렉토리 구조
+
+### `/app` - Next.js 15 App Router
+```
+app/
+├── (auth)/                     # 인증 관련 라우트 그룹
+│   ├── login/
+│   └── register/
+├── (dashboard)/                # 대시보드 라우트 그룹
+│   ├── posts/
+│   ├── analytics/
+│   └── settings/
+├── blog/                       # 블로그 페이지
+│   ├── [slug]/                 # 동적 포스트 페이지
+│   └── category/
+├── api/                        # API 라우트
+│   ├── ai/                     # AI 관련 API
+│   ├── posts/                  # 포스트 관련 API
+│   ├── seo/                    # SEO 관련 API
+│   └── auth/                   # 인증 관련 API
+├── globals.css                 # 전역 스타일
+├── layout.tsx                  # 루트 레이아웃
+└── page.tsx                    # 홈 페이지
+```
+
+### `/components` - React 컴포넌트
+```
+components/
+├── ui/                         # 기본 UI 컴포넌트
+│   ├── Button.tsx
+│   ├── Input.tsx
+│   ├── Modal.tsx
+│   └── index.ts               # 배럴 익스포트
+├── layout/                     # 레이아웃 컴포넌트
+│   ├── Header.tsx
+│   ├── Footer.tsx
+│   ├── Sidebar.tsx
+│   └── Navigation.tsx
+├── editor/                     # 에디터 관련 컴포넌트
+│   ├── MarkdownEditor.tsx
+│   ├── RichTextEditor.tsx
+│   └── PreviewPanel.tsx
+├── blog/                       # 블로그 관련 컴포넌트
+│   ├── PostCard.tsx
+│   ├── PostList.tsx
+│   ├── CategoryFilter.tsx
+│   └── PostDetail.tsx
+├── ai/                         # AI 관련 컴포넌트
+│   ├── AIAssistant.tsx
+│   ├── SEORecommendations.tsx
+│   └── CategorySuggestions.tsx
+└── auth/                       # 인증 관련 컴포넌트
+    ├── LoginForm.tsx
+    ├── RegisterForm.tsx
+    └── AuthProvider.tsx
+```
+
+### `/lib` - 유틸리티 및 설정
+```
+lib/
+├── supabase/                   # Supabase 클라이언트 설정
+│   ├── client.ts
+│   ├── server.ts
+│   └── types.ts
+├── ai/                         # AI 서비스 설정
+│   ├── gemini.ts
+│   ├── langchain.ts
+│   └── seo-analyzer.ts
+├── utils/                      # 유틸리티 함수
+│   ├── formatting.ts
+│   ├── validation.ts
+│   ├── date.ts
+│   └── seo.ts
+├── constants/                  # 상수 정의
+│   ├── api-endpoints.ts
+│   ├── categories.ts
+│   └── seo-templates.ts
+└── validations/                # 유효성 검사 스키마
+    ├── post.ts
+    ├── user.ts
+    └── auth.ts
+```
+
+### `/ai` - AI 관련 기능
+```
+ai/
+├── processors/                 # AI 처리 엔진
+│   ├── style-enhancer.ts       # 문서 스타일 향상
+│   ├── seo-optimizer.ts        # SEO 최적화
+│   └── category-classifier.ts  # 카테고리 분류
+├── models/                     # AI 모델 설정
+│   ├── gemini-config.ts
+│   └── langchain-pipeline.ts
+├── prompts/                    # AI 프롬프트 템플릿
+│   ├── style-prompts.ts
+│   ├── seo-prompts.ts
+│   └── category-prompts.ts
+└── services/                   # AI 서비스 클래스
+    ├── AIContentService.ts
+    ├── SEOService.ts
+    └── CategoryService.ts
+```
+
+### `/supabase` - 데이터베이스 및 백엔드
+```
+supabase/
+├── migrations/                 # 데이터베이스 마이그레이션
+│   ├── 001_initial_schema.sql
+│   ├── 002_user_management.sql
+│   └── 003_ai_features.sql
+├── functions/                  # Edge Functions
+│   ├── ai-process/
+│   ├── seo-analyze/
+│   └── category-suggest/
+├── seed/                       # 초기 데이터
+│   ├── categories.sql
+│   └── sample-posts.sql
+└── config.toml                 # Supabase 설정
+```
+
+### `/types` - TypeScript 타입 정의
+```
+types/
+├── database.ts                 # Supabase 자동 생성 타입
+├── api.ts                      # API 응답 타입
+├── blog.ts                     # 블로그 관련 타입
+├── user.ts                     # 사용자 관련 타입
+├── ai.ts                       # AI 서비스 타입
+└── index.ts                    # 타입 재내보내기
+```
+
+### `/tests` - 테스트 파일
+```
+tests/
+├── __mocks__/                  # 모의 객체
+├── unit/                       # 단위 테스트
+│   ├── components/
+│   ├── lib/
+│   └── ai/
+├── integration/                # 통합 테스트
+│   ├── api/
+│   └── database/
+├── e2e/                        # E2E 테스트
+│   ├── blog-flow.test.ts
+│   └── ai-features.test.ts
+└── setup.ts                    # 테스트 설정
+```
+
+## 명명 규칙
+
+### 파일 명명 규칙
+- **컴포넌트**: PascalCase (`PostEditor.tsx`)
+- **페이지**: kebab-case (`blog-post.tsx`)
+- **유틸리티**: camelCase (`formatDate.ts`)
+- **상수**: SCREAMING_SNAKE_CASE (`API_ENDPOINTS.ts`)
+- **타입**: PascalCase (`BlogPost.ts`)
+
+### 디렉토리 명명 규칙
+- **기능별**: kebab-case (`blog-editor/`)
+- **컴포넌트 그룹**: camelCase (`ui/`, `layout/`)
+- **API 라우트**: kebab-case (`api/blog-posts/`)
+
+## 파일 조직 원칙
+
+### 1. 기능별 그룹화
+- 관련된 기능을 동일한 디렉토리에 배치
+- AI 기능은 `/ai` 디렉토리에 독립적으로 구성
+
+### 2. 레이어별 분리
+- UI 컴포넌트: `/components`
+- 비즈니스 로직: `/lib`
+- 데이터 계층: `/supabase`
+- AI 서비스: `/ai`
+
+### 3. 재사용성 고려
+- 공통 컴포넌트는 `/components/ui`
+- 유틸리티 함수는 `/lib/utils`
+- 타입 정의는 `/types`
+
+### 4. 테스트 친화적
+- 각 기능 모듈과 대응하는 테스트 구조
+- 모의 객체와 테스트 유틸리티 분리
+
+## Phase별 확장 고려사항
+
+### Phase 1 (개인 사용)
+- 단일 사용자 기준으로 단순한 구조 유지
+- AI 기능에 집중한 디렉토리 구성
+
+### Phase 2 (멀티 사용자)
+- 사용자 관리 기능 추가
+- 관리자 패널 구성 (`/admin`)
+- 다중 테넌트 지원을 위한 데이터 구조 확장
+
+## 환경별 설정 파일
+
+### 개발 환경
+- `.env.local` - 로컬 개발 환경 변수
+- `.env.development` - 개발 서버 환경 변수
+
+### 프로덕션 환경
+- `.env.production` - 프로덕션 환경 변수
+- Vercel 환경 변수 설정
+
+## 코드 스타일 및 린팅
+
+### 설정 파일
+- `.eslintrc.json` - ESLint 설정
+- `.prettierrc` - Prettier 설정
+- `tailwind.config.js` - Tailwind CSS 설정
+
+### 자동화
+- pre-commit 훅으로 코드 스타일 검사
+- CI/CD 파이프라인에서 린팅 및 테스트 실행
+
+이 디렉토리 구조는 PRD에서 정의한 기술 스택과 기능 요구사항을 반영하여 설계되었으며, Phase 1에서 Phase 2로의 확장을 고려한 확장 가능한 구조입니다.
