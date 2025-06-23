@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { SupabaseStatus } from '@/components/SupabaseStatus';
 
 export default function Home() {
   return (
@@ -55,6 +56,9 @@ export default function Home() {
             </p>
           </div>
         </div>
+
+        {/* 개발 환경에서 Supabase 연결 상태 확인 */}
+        <SupabaseStatus />
       </main>
       <footer className="mt-16 text-center text-gray-500 dark:text-gray-400">
         <p>&copy; 2024 Dom vlog. AI로 더 나은 블로그 경험을 만들어갑니다.</p>

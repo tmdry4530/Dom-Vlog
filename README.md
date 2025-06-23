@@ -15,9 +15,10 @@ Dom vlog는 AI가 자동으로 글 가독성을 향상시키고, SEO를 최적�
 ## 🛠 기술 스택
 
 - **Frontend**: Next.js 15 (App Router), React 19, TypeScript
+- **Backend**: Supabase (PostgreSQL, Auth, Real-time)
 - **Styling**: Tailwind CSS, shadcn/ui, Radix UI
 - **Tools**: ESLint, Prettier, Husky, pnpm
-- **Future**: Supabase, Prisma, Vercel AI SDK, Gemini-2.5-flash-lite
+- **Future**: Vercel AI SDK, Gemini-2.5-flash-lite
 
 ## 📦 설치 및 실행
 
@@ -33,6 +34,30 @@ Dom vlog는 AI가 자동으로 글 가독성을 향상시키고, SEO를 최적�
 # 의존성 설치
 
 pnpm install
+\`\`\`
+
+### 환경설정
+
+1. Supabase 프로젝트 생성 ([supabase.com](https://supabase.com))
+2. 환경변수 파일 생성:
+
+\`\`\`bash
+
+# .env.local 파일 생성 (예제를 참고하여)
+
+touch .env.local
+\`\`\`
+
+3. \`.env.local\` 파일에 Supabase 정보 입력:
+
+\`\`\`env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+\`\`\`
+
+### 실행
+
+\`\`\`bash
 
 # 개발 서버 실행
 
@@ -45,6 +70,15 @@ pnpm build
 # 프로덕션 실행
 
 pnpm start
+\`\`\`
+
+### Supabase 연결 확인
+
+개발 서버 실행 후 홈페이지 하단의 "Supabase 연결 상태" 섹션에서 연결 테스트를 진행할 수 있습니다.
+
+또는 API 엔드포인트로 직접 확인:
+\`\`\`bash
+curl http://localhost:3000/api/supabase-test
 \`\`\`
 
 ### 개발 도구
@@ -76,14 +110,49 @@ pnpm type-check
 
 \`\`\`
 dom-vlog/
-├── src/
-│ ├── app/ # Next.js App Router
-│ ├── components/ # React 컴포넌트
-│ │ └── ui/ # UI 컴포넌트
-│ └── lib/ # 유틸리티 함수
+├── app/ # Next.js 15 App Router
+│ ├── api/ # API 라우트
+│ │ └── supabase-test/ # Supabase 연결 테스트
+│ ├── layout.tsx # 루트 레이아웃
+│ └── page.tsx # 홈페이지
+├── components/ # 재사용 가능한 React 컴포넌트
+│ ├── ui/ # 기본 UI 컴포넌트 (shadcn/ui)
+│ ├── layout/ # 레이아웃 컴포넌트
+│ ├── editor/ # 에디터 관련 컴포넌트
+│ ├── blog/ # 블로그 관련 컴포넌트
+│ ├── ai/ # AI 관련 컴포넌트
+│ ├── auth/ # 인증 관련 컴포넌트
+│ └── SupabaseStatus.tsx # Supabase 연결 상태 컴포넌트
+├── lib/ # 유틸리티 및 설정
+│ ├── ai/ # AI 서비스 설정
+│ ├── utils/ # 유틸리티 함수
+│ ├── constants/ # 상수 정의
+│ ├── validations/ # 유효성 검사 스키마
+│ └── utils.ts # 일반 유틸리티
+├── types/ # TypeScript 타입 정의
+├── hooks/ # 커스텀 React 훅
+├── ai/ # AI 관련 기능
+│ ├── processors/ # AI 처리 엔진
+│ ├── models/ # AI 모델 설정
+│ ├── prompts/ # AI 프롬프트 템플릿
+│ └── services/ # AI 서비스 클래스
+├── supabase/ # Supabase 설정 및 마이그레이션
+│ ├── migrations/ # 데이터베이스 마이그레이션
+│ ├── functions/ # Edge Functions
+│ ├── seed/ # 초기 데이터
+│ ├── client.ts # 클라이언트 사이드 설정
+│ ├── server.ts # 서버 사이드 설정
+│ └── utils.ts # Supabase 유틸리티
+├── tests/ # 테스트 파일
+│ ├── **mocks**/ # 모의 객체
+│ ├── unit/ # 단위 테스트
+│ ├── integration/ # 통합 테스트
+│ └── e2e/ # E2E 테스트
+├── docs/ # 프로젝트 문서
+├── middleware.ts # Next.js 미들웨어 (Supabase Auth)
 ├── public/ # 정적 파일
 ├── .husky/ # Git 훅
-└── docs/ # 문서
+└── .env.local # 환경변수 (로컬 개발용)
 \`\`\`
 
 ## 🤝 개발 가이드라인
