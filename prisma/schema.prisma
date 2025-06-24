@@ -1,0 +1,158 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+// Dom vlog - Phase 1 Database Schema
+// AI 기능이 내장된 개인 기술 블로그 플랫폼
+// 단일 사용자 구조로 설계
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===== Phase 1: 단일 사용자 스키마 =====
+
+// 개인 프로필 테이블 (단일 레코드)
+model Profile {
+  id          String   @id @default(cuid())
+  userId      String   @unique // Phase 2 확장 대비
+  email       String   @unique
+  username    String   @unique
+  displayName String
+  bio         String?
+  avatar      String?
+  website     String?
+  github      String?
+  twitter     String?
+  linkedin    String?
+  // 블로그 설정
+  blogTitle   String   @default("Dom vlog")
+  blogSubtitle String?
+  blogDescription String?
+  // 메타데이터
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 관계
+  posts       Post[]
+
+  @@map("profiles")
+}
+
+// 카테고리 테이블
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  color       String?  // UI에서 카테고리 색상 표시용
+  // 메타데이터
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 관계
+  posts       PostCategory[]
+
+  @@map("categories")
+}
+
+// 블로그 포스트 테이블
+model Post {
+  id            String     @id @default(cuid())
+  title         String
+  slug          String     @unique
+  content       String     // Markdown 원본 콘텐츠
+  excerpt       String?    // 요약 (AI 생성 또는 수동)
+  enhancedContent String?  // AI로 스타일링된 HTML 콘텐츠
+  // 게시 상태
+  status        PostStatus @default(DRAFT)
+  publishedAt   DateTime?
+  featuredImage String?
+  // 조회수 및 통계
+  viewCount     Int        @default(0)
+  // 메타데이터
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  // 관계
+  authorId      String
+  author        Profile    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  categories    PostCategory[]
+  seoScore      SeoScore?
+
+  // 인덱스
+  @@index([status, publishedAt])
+  @@index([slug])
+  @@index([authorId])
+  @@map("posts")
+}
+
+// 포스트-카테고리 다대다 관계 테이블
+model PostCategory {
+  id         String   @id @default(cuid())
+  postId     String
+  categoryId String
+  // AI 추천 관련
+  confidence Float?   // AI 카테고리 추천 신뢰도 (0.0 - 1.0)
+  isAiSuggested Boolean @default(false)
+  createdAt  DateTime @default(now())
+
+  // 관계
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  // 복합 인덱스 (중복 방지)
+  @@unique([postId, categoryId])
+  @@map("post_categories")
+}
+
+// SEO 점수 및 메타데이터 테이블
+model SeoScore {
+  id               String   @id @default(cuid())
+  postId           String   @unique
+  // SEO 점수
+  overallScore     Int      // 전체 SEO 점수 (0-100)
+  readabilityScore Int      // 가독성 점수 (0-100)
+  performanceScore Int      // 성능 점수 (0-100)
+  // AI 생성 메타데이터
+  metaTitle        String?
+  metaDescription  String?
+  keywords         String[] // 키워드 배열
+  openGraphTitle   String?
+  openGraphDescription String?
+  openGraphImage   String?
+  // 분석 데이터
+  wordCount        Int?
+  readingTime      Int?     // 분 단위
+  // AI 처리 상태
+  isProcessed      Boolean  @default(false)
+  processedAt      DateTime?
+  aiModel          String?  // 사용된 AI 모델명
+  // 메타데이터
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // 관계
+  post             Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([overallScore])
+  @@index([isProcessed])
+  @@map("seo_scores")
+}
+
+// 열거형 정의
+
+// 포스트 상태
+enum PostStatus {
+  DRAFT     // 초안
+  PUBLISHED // 게시됨
+  ARCHIVED  // 보관됨
+}

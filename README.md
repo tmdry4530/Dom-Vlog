@@ -38,22 +38,52 @@ pnpm install
 
 ### 환경설정
 
-1. Supabase 프로젝트 생성 ([supabase.com](https://supabase.com))
-2. 환경변수 파일 생성:
+#### 🚀 자동 설정 (권장)
 
+**Windows (PowerShell):**
+\`\`\`powershell
+.\scripts\setup-env.ps1
+\`\`\`
+
+**Linux/Mac (Bash):**
 \`\`\`bash
-
-# .env.local 파일 생성 (예제를 참고하여)
-
-touch .env.local
+./scripts/setup-env.sh
 \`\`\`
 
-3. \`.env.local\` 파일에 Supabase 정보 입력:
+#### 🔧 수동 설정
 
-\`\`\`env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+1. **Supabase 프로젝트 생성** ([supabase.com](https://supabase.com))
+
+2. **환경변수 파일 생성:**
+   \`\`\`bash
+
+# 예제 파일을 복사하여 .env.local 생성
+
+cp env.example .env.local
 \`\`\`
+
+3. **필수 환경변수 설정:**
+   \`\`\`env
+
+# Supabase 설정 (필수)
+
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+
+# AI 기능 사용 시 필수
+
+GOOGLE_AI_API_KEY=your_google_ai_api_key_here
+
+# 개발 환경 설정
+
+NODE_ENV=development
+\`\`\`
+
+4. **API 키 발급:**
+   - **Supabase**: Dashboard > Settings > API에서 Project URL과 anon public key 확인
+   - **Google AI**: [Google AI Studio](https://makersuite.google.com/app/apikey)에서 API 키 생성
+
+> 📚 **자세한 환경설정 가이드**: [docs/environment-setup-guide.md](./docs/environment-setup-guide.md)
 
 ### 실행
 
