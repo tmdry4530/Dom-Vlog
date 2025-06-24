@@ -8,7 +8,7 @@ import type { GeminiConfig } from '@/types/ai';
 
 // 기본 Gemini 설정
 export const DEFAULT_GEMINI_CONFIG: Partial<GeminiConfig> = {
-  model: 'gemini-2.5-flash-lite',
+  model: 'gemini-1.5-flash',
   generationConfig: {
     temperature: 0.7,
     topK: 40,
@@ -62,15 +62,6 @@ export function createGeminiClient(
 
 // 모델별 설정
 export const MODEL_CONFIGS = {
-  'gemini-2.5-flash-lite': {
-    ...DEFAULT_GEMINI_CONFIG,
-    model: 'gemini-2.5-flash-lite',
-    generationConfig: {
-      ...DEFAULT_GEMINI_CONFIG.generationConfig,
-      maxOutputTokens: 1024, // 빠른 응답을 위해 토큰 수 제한
-      temperature: 0.5, // 일관성을 위해 낮은 temperature
-    },
-  },
   'gemini-1.5-flash': {
     ...DEFAULT_GEMINI_CONFIG,
     model: 'gemini-1.5-flash',
@@ -93,7 +84,7 @@ export const MODEL_CONFIGS = {
 
 // 모델 인스턴스 생성 헬퍼
 export function createGeminiModel(
-  modelName: keyof typeof MODEL_CONFIGS = 'gemini-2.5-flash-lite',
+  modelName: keyof typeof MODEL_CONFIGS = 'gemini-1.5-flash',
   customConfig?: Partial<GeminiConfig>
 ) {
   try {
@@ -113,7 +104,7 @@ export function createGeminiModel(
 
 // 스타일 업그레이드용 모델 설정
 export function createStyleUpgradeModel(customConfig?: Partial<GeminiConfig>) {
-  return createGeminiModel('gemini-2.5-flash-lite', {
+  return createGeminiModel('gemini-1.5-flash', {
     ...customConfig,
     generationConfig: {
       temperature: 0.6, // 일관된 스타일링을 위해 조정
@@ -129,7 +120,7 @@ export function createStyleUpgradeModel(customConfig?: Partial<GeminiConfig>) {
 export function createReadabilityAnalyzerModel(
   customConfig?: Partial<GeminiConfig>
 ) {
-  return createGeminiModel('gemini-2.5-flash-lite', {
+  return createGeminiModel('gemini-1.5-flash', {
     ...customConfig,
     generationConfig: {
       temperature: 0.3, // 정확한 분석을 위해 낮은 temperature

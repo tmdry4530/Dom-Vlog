@@ -23,7 +23,8 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:seed": "tsx supabase/seed/seed.ts"
+    "db:seed": "tsx supabase/seed/seed.ts",
+    "ai:test": "node scripts/test-real-ai.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

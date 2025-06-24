@@ -127,7 +127,28 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const result = await styleEnhancer.enhanceContent(styleRequest);
+    console.log('🔧 StyleEnhancer 시작...');
+    console.log('📋 요청 내용:', {
+      contentLength: styleRequest.content.length,
+      contentType: styleRequest.contentType,
+      options: styleRequest.options,
+    });
+
+    let result;
+    try {
+      result = await styleEnhancer.enhanceContent(styleRequest);
+      console.log('✅ StyleEnhancer 완료:', {
+        processingTime: result.processingMetrics.duration,
+        readabilityScore: result.readabilityScore.score,
+      });
+    } catch (enhanceError) {
+      console.error('❌ StyleEnhancer 상세 오류:', enhanceError);
+      console.error(
+        '❌ 오류 스택:',
+        enhanceError instanceof Error ? enhanceError.stack : 'No stack'
+      );
+      throw enhanceError;
+    }
 
     // 성공 응답
     const response: StyleUpgradeResponse = {
