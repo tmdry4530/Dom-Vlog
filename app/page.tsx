@@ -1,3 +1,6 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -53,6 +56,20 @@ const stats = [
 ];
 
 export default function Home() {
+  const router = useRouter();
+
+  const handleStartBlog = () => {
+    router.push('/blog');
+  };
+
+  const handleLearnMore = () => {
+    // 스크롤하여 기능 섹션으로 이동
+    const featuresSection = document.getElementById('features');
+    if (featuresSection) {
+      featuresSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <BlogLayout>
       {/* Hero Section */}
@@ -76,10 +93,19 @@ export default function Home() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-6">
-            <Button size="lg" className="w-full sm:w-auto">
+            <Button
+              size="lg"
+              className="w-full sm:w-auto"
+              onClick={handleStartBlog}
+            >
               블로그 시작하기
             </Button>
-            <Button variant="outline" size="lg" className="w-full sm:w-auto">
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full sm:w-auto"
+              onClick={handleLearnMore}
+            >
               더 알아보기
             </Button>
           </div>
@@ -88,6 +114,7 @@ export default function Home() {
 
       {/* Features Section */}
       <Section
+        id="features"
         title="핵심 기능"
         subtitle="AI 기술로 더 나은 블로깅 경험을 제공합니다"
         className="py-12"

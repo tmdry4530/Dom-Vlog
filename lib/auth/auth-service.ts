@@ -9,6 +9,9 @@ export interface AuthError {
   message: string;
 }
 
+// OAuth 제공자 타입
+export type OAuthProvider = 'github' | 'google';
+
 // 사용자 세션 정보 타입
 export interface UserSession {
   id: string;
@@ -22,12 +25,217 @@ export interface UserSession {
 }
 
 /**
+ * 허용된 사용자인지 확인 (개인 블로그용 화이트리스트)
+ */
+function isAllowedUser(email: string): boolean {
+  const allowedEmails = process.env.ALLOWED_USER_EMAILS;
+
+  if (!allowedEmails) {
+    console.error('ALLOWED_USER_EMAILS 환경변수가 설정되지 않았습니다.');
+    return false;
+  }
+
+  // 쉼표로 구분된 이메일 목록 파싱
+  const emailList = allowedEmails
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter((email) => email.length > 0);
+
+  return emailList.includes(email.toLowerCase());
+}
+
+/**
+ * OAuth 로그인 리다이렉트 URL 생성 (클라이언트 사이드용)
+ */
+export function getOAuthRedirectUrl(provider: OAuthProvider): string {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  return `${baseUrl}/auth/callback?provider=${provider}`;
+}
+
+/**
+ * OAuth 로그인 처리 (클라이언트 사이드용)
+ * 이 함수는 클라이언트에서 호출되어야 합니다
+ */
+export async function signInWithOAuth(
+  provider: OAuthProvider
+): Promise<ApiResponse<{ url: string }>> {
+  try {
+    // 클라이언트 사이드에서만 동작
+    if (typeof window === 'undefined') {
+      return {
+        success: false,
+        error: '이 함수는 클라이언트에서만 호출할 수 있습니다.',
+      };
+    }
+
+    // 동적 import로 클라이언트 supabase 가져오기
+    const { supabase } = await import('@/supabase/client');
+
+    const redirectTo = getOAuthRedirectUrl(provider);
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+      },
+    });
+
+    if (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+
+    if (!data.url) {
+      return {
+        success: false,
+        error: 'OAuth URL을 생성할 수 없습니다.',
+      };
+    }
+
+    return {
+      success: true,
+      data: { url: data.url },
+      message: `${provider === 'github' ? 'GitHub' : 'Google'}으로 로그인 중입니다...`,
+    };
+  } catch (error) {
+    console.error(`${provider} OAuth 로그인 중 오류 발생:`, error);
+    return {
+      success: false,
+      error: '소셜 로그인 중 오류가 발생했습니다.',
+    };
+  }
+}
+
+/**
+ * OAuth 콜백 처리 (서버 사이드)
+ */
+export async function handleOAuthCallback(
+  code: string,
+  provider: OAuthProvider
+): Promise<ApiResponse<UserSession>> {
+  try {
+    const supabase = await createClient();
+
+    // OAuth 토큰 교환
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+
+    if (!data.user) {
+      return {
+        success: false,
+        error: 'OAuth 로그인에 실패했습니다.',
+      };
+    }
+
+    // 허용된 사용자인지 확인
+    if (!data.user.email || !isAllowedUser(data.user.email)) {
+      return {
+        success: false,
+        error: '이 블로그에 접근할 권한이 없습니다.',
+      };
+    }
+
+    // 기존 프로필 확인 또는 생성
+    let profile = await prisma.profile.findFirst({
+      where: { email: data.user.email },
+      select: {
+        id: true,
+        username: true,
+        displayName: true,
+        avatar: true,
+      },
+    });
+
+    // 새 사용자인 경우 프로필 생성
+    if (!profile && data.user.email) {
+      // OAuth 사용자 메타데이터에서 정보 추출
+      const userMetadata = data.user.user_metadata || {};
+      const username =
+        userMetadata.user_name ||
+        userMetadata.preferred_username ||
+        data.user.email.split('@')[0];
+
+      const displayName =
+        userMetadata.full_name || userMetadata.name || username;
+
+      const avatar = userMetadata.avatar_url || userMetadata.picture || null;
+
+      try {
+        profile = await prisma.profile.create({
+          data: {
+            userId: data.user.id,
+            email: data.user.email,
+            username,
+            displayName,
+            avatar,
+          },
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            avatar: true,
+          },
+        });
+      } catch (profileError) {
+        console.error('프로필 생성 중 오류:', profileError);
+        // 프로필 생성에 실패해도 로그인은 성공으로 처리
+      }
+    }
+
+    const userSession: UserSession = {
+      id: data.user.id,
+      email: data.user.email!,
+      profile: profile
+        ? {
+            id: profile.id,
+            username: profile.username,
+            displayName: profile.displayName,
+            avatar: profile.avatar || undefined,
+          }
+        : undefined,
+    };
+
+    return {
+      success: true,
+      data: userSession,
+      message: `${provider === 'github' ? 'GitHub' : 'Google'} 로그인이 완료되었습니다.`,
+    };
+  } catch (error) {
+    console.error(`${provider} OAuth 콜백 처리 중 오류 발생:`, error);
+    return {
+      success: false,
+      error: '소셜 로그인 처리 중 오류가 발생했습니다.',
+    };
+  }
+}
+
+/**
  * 로그인 처리
  */
 export async function signIn(
   loginData: LoginInput
 ): Promise<ApiResponse<UserSession>> {
   try {
+    // 허용된 사용자인지 먼저 확인
+    if (!isAllowedUser(loginData.email)) {
+      return {
+        success: false,
+        error: '이 블로그에 접근할 권한이 없습니다.',
+      };
+    }
+
     const supabase = await createClient();
 
     const { data, error } = await supabase.auth.signInWithPassword({

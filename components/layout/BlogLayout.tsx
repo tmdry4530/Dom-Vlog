@@ -125,6 +125,7 @@ interface SectionProps {
   className?: string;
   title?: string;
   subtitle?: string;
+  id?: string;
 }
 
 export function Section({
@@ -132,9 +133,10 @@ export function Section({
   className,
   title,
   subtitle,
+  id,
 }: SectionProps) {
   return (
-    <section className={cn('space-y-6', className)}>
+    <section className={cn('space-y-6', className)} id={id}>
       {(title || subtitle) && (
         <div className="space-y-2">
           {title && (

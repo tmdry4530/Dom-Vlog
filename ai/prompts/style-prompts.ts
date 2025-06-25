@@ -174,23 +174,25 @@ export const TECHNICAL_CONTENT_PROMPT: PromptTemplate = {
   },
 };
 
+import { PromptVariableReplacer } from '@/lib/utils/prompt-helpers';
+
 // 프롬프트 변수 대체 함수
 export function replacePromptVariables(
   prompt: PromptTemplate,
   variables: Record<string, string>
 ): { system: string; user: string } {
-  let systemPrompt = prompt.system;
-  let userPrompt = prompt.user;
-
   // 기본 변수와 제공된 변수 병합
   const allVariables = { ...prompt.variables, ...variables };
 
-  // 변수 대체 수행
-  Object.entries(allVariables).forEach(([key, value]) => {
-    const placeholder = `{{${key}}}`;
-    systemPrompt = systemPrompt.replace(new RegExp(placeholder, 'g'), value);
-    userPrompt = userPrompt.replace(new RegExp(placeholder, 'g'), value);
-  });
+  // 통합된 변수 치환 함수 사용
+  const systemPrompt = PromptVariableReplacer.replaceVariables(
+    prompt.system,
+    allVariables
+  );
+  const userPrompt = PromptVariableReplacer.replaceVariables(
+    prompt.user,
+    allVariables
+  );
 
   return { system: systemPrompt, user: userPrompt };
 }
@@ -200,34 +202,17 @@ export function validatePromptVariables(
   prompt: PromptTemplate,
   variables: Record<string, string>
 ): { isValid: boolean; missingVariables: string[] } {
-  const requiredVariables = new Set<string>();
-
-  // 시스템 프롬프트에서 변수 추출
-  const systemMatches = prompt.system.match(/\{\{(\w+)\}\}/g);
-  if (systemMatches) {
-    systemMatches.forEach((match) => {
-      const variable = match.replace(/\{\{|\}\}/g, '');
-      requiredVariables.add(variable);
-    });
-  }
-
-  // 사용자 프롬프트에서 변수 추출
-  const userMatches = prompt.user.match(/\{\{(\w+)\}\}/g);
-  if (userMatches) {
-    userMatches.forEach((match) => {
-      const variable = match.replace(/\{\{|\}\}/g, '');
-      requiredVariables.add(variable);
-    });
-  }
-
-  // 누락된 변수 확인
   const allVariables = { ...prompt.variables, ...variables };
-  const missingVariables = Array.from(requiredVariables).filter(
-    (variable) => !(variable in allVariables)
+
+  // 시스템 프롬프트와 사용자 프롬프트 결합하여 검증
+  const combinedTemplate = `${prompt.system}\n${prompt.user}`;
+  const validation = PromptVariableReplacer.validateVariables(
+    combinedTemplate,
+    allVariables
   );
 
   return {
-    isValid: missingVariables.length === 0,
-    missingVariables,
+    isValid: validation.isValid,
+    missingVariables: validation.missingVariables,
   };
 }

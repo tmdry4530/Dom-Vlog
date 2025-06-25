@@ -108,7 +108,7 @@ export interface IContentProcessor {
 // Gemini 관련 타입
 export interface GeminiConfig {
   apiKey: string;
-  model: 'gemini-2.5-flash-lite' | 'gemini-1.5-pro';
+  model: 'gemini-1.5-flash' | 'gemini-1.5-pro';
   generationConfig?: {
     temperature?: number;
     topK?: number;

@@ -1,2 +1,20 @@
-export { Button, buttonVariants } from './button';
-export { Checkbox } from './checkbox';
+// Re-export all UI components
+export * from './alert-dialog';
+export * from './avatar';
+export * from './badge';
+export * from './button';
+export * from './card';
+export * from './checkbox';
+export * from './dialog';
+export * from './dropdown-menu';
+export * from './form';
+export * from './ImageUpload';
+export * from './input';
+export * from './label';
+export * from './navigation-menu';
+export * from './progress';
+export * from './select';
+export * from './separator';
+export * from './switch';
+export * from './tabs';
+export * from './textarea';

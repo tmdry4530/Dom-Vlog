@@ -652,3 +652,150 @@ export function retry<T>(
     }
   });
 }
+
+// 공통 HTTP 상태 코드 매핑
+const ERROR_STATUS_MAP: Record<string, number> = {
+  '인증이 필요합니다.': 401,
+  '권한이 없습니다': 403,
+  '접근할 수 없습니다': 403,
+  '찾을 수 없습니다': 404,
+  '존재하지 않습니다': 404,
+  '이미 존재합니다': 400,
+  '올바르지 않습니다': 400,
+  필수: 400,
+  형식: 400,
+} as const;
+
+/**
+ * 표준화된 API 응답 생성기
+ */
+export class ApiResponseBuilder {
+  static success<T>(
+    data?: T,
+    message?: string,
+    statusCode: number = 200
+  ): NextResponse {
+    return NextResponse.json(
+      {
+        success: true,
+        data,
+        message,
+        timestamp: new Date().toISOString(),
+      },
+      { status: statusCode }
+    );
+  }
+
+  static error(
+    error: string,
+    statusCode?: number,
+    details?: unknown
+  ): NextResponse {
+    const resolvedStatusCode = statusCode || this.getStatusCodeFromError(error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        error,
+        details,
+        timestamp: new Date().toISOString(),
+      },
+      { status: resolvedStatusCode }
+    );
+  }
+
+  static validation(
+    message: string,
+    errors: Record<string, string[]>
+  ): NextResponse {
+    return NextResponse.json(
+      {
+        success: false,
+        error: message,
+        validationErrors: errors,
+        timestamp: new Date().toISOString(),
+      },
+      { status: 400 }
+    );
+  }
+
+  private static getStatusCodeFromError(error: string): number {
+    for (const [keyword, statusCode] of Object.entries(ERROR_STATUS_MAP)) {
+      if (error.includes(keyword)) {
+        return statusCode;
+      }
+    }
+    return 500; // 기본값
+  }
+}
+
+/**
+ * 공통 검증 로직
+ */
+export class ValidationHelper {
+  static checkRequired(
+    params: Record<string, unknown>,
+    requiredFields: string[]
+  ): { isValid: boolean; errors: Record<string, string[]> } {
+    const errors: Record<string, string[]> = {};
+
+    for (const field of requiredFields) {
+      const value = params[field];
+      if (!value || (typeof value === 'string' && value.trim() === '')) {
+        errors[field] = [`${field}은(는) 필수 입력 항목입니다.`];
+      }
+    }
+
+    return {
+      isValid: Object.keys(errors).length === 0,
+      errors,
+    };
+  }
+
+  static validateStringLength(
+    value: string,
+    fieldName: string,
+    min?: number,
+    max?: number
+  ): string[] {
+    const errors: string[] = [];
+
+    if (min && value.length < min) {
+      errors.push(`${fieldName}은(는) ${min}자 이상이어야 합니다.`);
+    }
+
+    if (max && value.length > max) {
+      errors.push(`${fieldName}은(는) ${max}자 이하여야 합니다.`);
+    }
+
+    return errors;
+  }
+
+  static validatePattern(
+    value: string,
+    pattern: RegExp,
+    fieldName: string,
+    message: string
+  ): string[] {
+    return pattern.test(value) ? [] : [`${fieldName}: ${message}`];
+  }
+}
+
+/**
+ * API 라우트 핸들러 래퍼
+ */
+export function withApiHandler<T extends Record<string, unknown>>(
+  handler: (params: T) => Promise<NextResponse>
+) {
+  return async (request: NextRequest): Promise<NextResponse> => {
+    try {
+      const { searchParams } = new URL(request.url);
+      const params = Object.fromEntries(searchParams.entries()) as T;
+
+      return await handler(params);
+    } catch (error) {
+      console.error('API 핸들러 오류:', error);
+      return ApiResponseBuilder.error('서버 내부 오류가 발생했습니다.', 500);
+    }
+  };
+}

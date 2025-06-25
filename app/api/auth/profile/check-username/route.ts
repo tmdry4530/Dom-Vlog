@@ -1,60 +1,58 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { checkUsernameAvailability } from '@/lib/auth/profile-service';
+import {
+  ApiResponseBuilder,
+  ValidationHelper,
+  withApiHandler,
+} from '@/lib/utils/api-helpers';
 
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const username = searchParams.get('username');
-
-    if (!username) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: '사용자명을 입력해주세요.',
-        },
-        { status: 400 }
-      );
-    }
-
-    if (username.length < 3 || username.length > 20) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: '사용자명은 3자 이상 20자 이하로 입력해주세요.',
-        },
-        { status: 400 }
-      );
-    }
-
-    if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: '사용자명은 영문, 숫자, _, - 만 사용 가능합니다.',
-        },
-        { status: 400 }
-      );
-    }
-
-    // 사용자명 중복 확인
-    const result = await checkUsernameAvailability(username);
-
-    return NextResponse.json(
-      {
-        success: result.success,
-        data: result.data,
-        error: result.error,
-      },
-      { status: result.success ? 200 : 500 }
-    );
-  } catch (error) {
-    console.error('사용자명 중복 확인 API 오류:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: '서버 내부 오류가 발생했습니다.',
-      },
-      { status: 500 }
-    );
-  }
+interface CheckUsernameParams extends Record<string, unknown> {
+  username: string;
 }
+
+export const GET = withApiHandler<CheckUsernameParams>(async (params) => {
+  // 필수 필드 검증
+  const { isValid, errors } = ValidationHelper.checkRequired(params, [
+    'username',
+  ]);
+  if (!isValid) {
+    return ApiResponseBuilder.validation('필수 필드가 누락되었습니다.', errors);
+  }
+
+  const { username } = params;
+
+  // 길이 검증
+  const lengthErrors = ValidationHelper.validateStringLength(
+    username,
+    '사용자명',
+    3,
+    20
+  );
+  if (lengthErrors.length > 0) {
+    return ApiResponseBuilder.error(lengthErrors[0], 400);
+  }
+
+  // 패턴 검증
+  const patternErrors = ValidationHelper.validatePattern(
+    username,
+    /^[a-zA-Z0-9_-]+$/,
+    '사용자명',
+    '영문, 숫자, _, - 만 사용 가능합니다.'
+  );
+  if (patternErrors.length > 0) {
+    return ApiResponseBuilder.error(patternErrors[0], 400);
+  }
+
+  // 사용자명 중복 확인
+  const result = await checkUsernameAvailability(username);
+
+  if (!result.success) {
+    return ApiResponseBuilder.error(result.error || '사용자명 확인 실패', 500);
+  }
+
+  return ApiResponseBuilder.success(
+    result.data,
+    result.data?.available
+      ? '사용 가능한 사용자명입니다.'
+      : '이미 사용 중인 사용자명입니다.'
+  );
+});

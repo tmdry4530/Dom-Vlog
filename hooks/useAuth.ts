@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNotifications } from './useNotifications';
 import type { UserSession } from '@/lib/auth/auth-service';
+import { signInWithOAuth, type OAuthProvider } from '@/lib/auth/auth-service';
 
 // 인증 상태 인터페이스
 export interface AuthState {
@@ -22,6 +23,9 @@ export interface LoginData {
 // useAuth 결과 인터페이스
 export interface UseAuthResult extends AuthState {
   login: (data: LoginData) => Promise<boolean>;
+  loginWithOAuth: (
+    provider: OAuthProvider
+  ) => Promise<{ success: boolean; url?: string; error?: string }>;
   logout: () => Promise<boolean>;
   checkAuth: () => Promise<void>;
   refreshSession: () => Promise<void>;
@@ -50,6 +54,18 @@ const apiCall = async (url: string, options: RequestInit = {}) => {
 
   return data;
 };
+
+// 사용자 정보 타입
+export interface User {
+  id: string;
+  email: string;
+  profile?: {
+    id: string;
+    username: string;
+    displayName: string;
+    avatar?: string;
+  };
+}
 
 export function useAuth(): UseAuthResult {
   const [state, setState] = useState<AuthState>({
@@ -153,6 +169,41 @@ export function useAuth(): UseAuthResult {
     return false;
   }, [withErrorHandling, updateState, showSuccess]);
 
+  // OAuth 소셜 로그인
+  const loginWithOAuth = useCallback(
+    async (
+      provider: OAuthProvider
+    ): Promise<{ success: boolean; url?: string; error?: string }> => {
+      try {
+        updateState({ error: null, isLoading: true });
+        const result = await signInWithOAuth(provider);
+        updateState({ isLoading: false });
+
+        if (result.success && result.data) {
+          showSuccess(
+            `${provider === 'github' ? 'GitHub' : 'Google'} 로그인`,
+            '리다이렉트 중...'
+          );
+          return { success: true, url: result.data.url };
+        } else {
+          const errorMessage = result.error || '소셜 로그인에 실패했습니다.';
+          updateState({ error: errorMessage });
+          showError('로그인 실패', errorMessage);
+          return { success: false, error: errorMessage };
+        }
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : '소셜 로그인 중 오류가 발생했습니다.';
+        updateState({ error: errorMessage, isLoading: false });
+        showError('오류 발생', errorMessage);
+        return { success: false, error: errorMessage };
+      }
+    },
+    [updateState, showSuccess, showError]
+  );
+
   // 세션 갱신
   const refreshSession = useCallback(async () => {
     await checkAuth();
@@ -180,6 +231,7 @@ export function useAuth(): UseAuthResult {
   return {
     ...state,
     login,
+    loginWithOAuth,
     logout,
     checkAuth,
     refreshSession,
