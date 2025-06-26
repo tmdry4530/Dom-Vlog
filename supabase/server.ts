@@ -1,39 +1,85 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import type { Database } from './client';
+// import type { Database } from './client';
 
 export const createClient = async () => {
   const cookieStore = await cookies();
 
-  // Supabase 환경변수 검증
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          } catch {
+            // The `setAll` method was called from a Server Component.
+            // This can be ignored if you have middleware refreshing
+            // user sessions.
+          }
+        },
+      },
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+      },
+    }
+  );
+};
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error(
-      'Supabase 환경변수가 설정되지 않았습니다. .env.local 파일에 NEXT_PUBLIC_SUPABASE_URL과 NEXT_PUBLIC_SUPABASE_ANON_KEY를 설정해주세요.'
-    );
+// 인증 상태 확인을 위한 헬퍼 함수
+export const getUser = async () => {
+  const supabase = await createClient();
+
+  try {
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+
+    console.log('=== Supabase getUser ===');
+    console.log('User:', user ? { id: user.id, email: user.email } : 'null');
+    console.log('Error:', error);
+
+    return { user, error };
+  } catch (error) {
+    console.error('Error getting user:', error);
+    return { user: null, error };
   }
+};
 
-  return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value;
-      },
-      set(name: string, value: string, options: Record<string, unknown>) {
-        try {
-          cookieStore.set({ name, value, ...options });
-        } catch {
-          // Server Component에서 쿠키 설정 시 발생할 수 있는 에러 처리
-        }
-      },
-      remove(name: string, options: Record<string, unknown>) {
-        try {
-          cookieStore.set({ name, value: '', ...options });
-        } catch {
-          // Server Component에서 쿠키 삭제 시 발생할 수 있는 에러 처리
-        }
-      },
-    },
-  });
+// 세션 확인을 위한 헬퍼 함수
+export const getSession = async () => {
+  const supabase = await createClient();
+
+  try {
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
+
+    console.log('=== Supabase getSession ===');
+    console.log(
+      'Session:',
+      session
+        ? {
+            user: { id: session.user.id, email: session.user.email },
+            expires_at: session.expires_at,
+          }
+        : 'null'
+    );
+    console.log('Error:', error);
+
+    return { session, error };
+  } catch (error) {
+    console.error('Error getting session:', error);
+    return { session: null, error };
+  }
 };

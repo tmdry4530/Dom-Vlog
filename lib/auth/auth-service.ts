@@ -35,13 +35,16 @@ function isAllowedUser(email: string): boolean {
     return false;
   }
 
-  // 쉼표로 구분된 이메일 목록 파싱
+  // 쉼표로 구분된 이메일 목록 파싱 (공백 제거 및 소문자 변환)
   const emailList = allowedEmails
     .split(',')
-    .map((email) => email.trim().toLowerCase())
-    .filter((email) => email.length > 0);
+    .map((e) => e.trim().toLowerCase())
+    .filter((e) => e.length > 0);
 
-  return emailList.includes(email.toLowerCase());
+  // 비교할 이메일도 모든 공백 제거 및 소문자 변환
+  const normalizedUserEmail = email.replace(/\s/g, '').toLowerCase();
+
+  return emailList.includes(normalizedUserEmail);
 }
 
 /**

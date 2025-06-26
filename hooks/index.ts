@@ -2,7 +2,8 @@
 
 // Auth hooks
 export { useAuth } from './useAuth';
-export type { AuthState, LoginData, UseAuthResult } from './useAuth';
+export { useAuthPermissions } from './useAuthPermissions';
+export type { AuthPermissions } from './useAuthPermissions';
 
 // Responsive hooks
 export {
@@ -28,3 +29,23 @@ export { useProfile } from './useProfile';
 // Notification hooks
 export { useNotifications } from './useNotifications';
 export type { UseNotificationsResult } from './useNotifications';
+
+// AI hooks
+export * from './ai';
+
+// Blog stats hooks
+export {
+  useBlogStats,
+  useCategoryStats,
+  useRecentPosts,
+  useBlogInfo,
+} from './useBlogStats';
+export type {
+  BlogStats,
+  CategoryStat,
+  RecentPost,
+  BlogInfo,
+} from './useBlogStats';
+
+// Profile stats hooks
+export { useProfileStats } from './useProfileStats';

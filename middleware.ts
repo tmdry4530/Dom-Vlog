@@ -52,14 +52,14 @@ function isPublicPath(pathname: string): boolean {
     '/api/auth/session',
     '/api/health',
     '/api/debug',
+    '/api/posts/recent',
+    '/api/stats',
+    '/api/categories/stats',
+    '/api/profile/blog-info',
+    '/api/posts',
   ];
 
-  return publicPaths.some(
-    (path) =>
-      path === pathname ||
-      (path === '/' && pathname === '/') ||
-      (path === '/blog' && pathname.startsWith('/blog'))
-  );
+  return publicPaths.some((path) => pathname.startsWith(path));
 }
 
 export async function middleware(request: NextRequest) {
@@ -74,6 +74,20 @@ export async function middleware(request: NextRequest) {
 
   if (!supabaseUrl || !supabaseAnonKey) {
     console.error('Supabase 환경변수가 설정되지 않았습니다.');
+    console.error('NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl);
+    console.error(
+      'NEXT_PUBLIC_SUPABASE_ANON_KEY:',
+      supabaseAnonKey ? '[설정됨]' : '[없음]'
+    );
+    return response;
+  }
+
+  // URL 형식 검증
+  try {
+    new URL(supabaseUrl);
+  } catch (_error) {
+    console.error('잘못된 Supabase URL 형식:', supabaseUrl);
+    console.error('올바른 형식: https://your-project-id.supabase.co');
     return response;
   }
 
@@ -134,6 +148,14 @@ export async function middleware(request: NextRequest) {
   if (requiresAuth(pathname)) {
     // 로그인하지 않은 사용자
     if (!user) {
+      // API 요청인 경우 JSON 에러 반환
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json(
+          { success: false, error: '인증이 필요합니다.' },
+          { status: 401 }
+        );
+      }
+
       const loginUrl = new URL('/auth/login', request.url);
       loginUrl.searchParams.set('redirect', pathname);
       return NextResponse.redirect(loginUrl);
@@ -141,6 +163,14 @@ export async function middleware(request: NextRequest) {
 
     // 화이트리스트에 없는 사용자
     if (!user.email || !isAllowedUser(user.email)) {
+      // API 요청인 경우 JSON 에러 반환
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json(
+          { success: false, error: '접근 권한이 없습니다.' },
+          { status: 403 }
+        );
+      }
+
       const unauthorizedUrl = new URL('/unauthorized', request.url);
       return NextResponse.redirect(unauthorizedUrl);
     }

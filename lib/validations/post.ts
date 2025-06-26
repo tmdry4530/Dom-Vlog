@@ -67,6 +67,7 @@ export const postFiltersSchema = z.object({
   status: z.nativeEnum(PostStatus).optional(),
   categoryId: z.string().cuid().optional(),
   search: z.string().max(100).optional(),
+  slug: z.string().max(100).optional(),
   dateFrom: z.string().datetime().optional(),
   dateTo: z.string().datetime().optional(),
 });

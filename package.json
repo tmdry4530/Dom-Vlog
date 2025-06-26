@@ -50,6 +50,7 @@
     "ai": "^4.3.16",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "langchain": "^0.3.29",
     "lucide-react": "^0.522.0",
     "markdown-it": "^14.1.0",
@@ -60,6 +61,7 @@
     "react-hook-form": "^7.58.1",
     "sonner": "^2.0.5",
     "tailwind-merge": "^3.3.1",
+    "tailwindcss-animate": "^1.0.7",
     "zod": "^3.25.67",
     "zustand": "^5.0.5"
   },

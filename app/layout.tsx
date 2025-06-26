@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
-import { Toaster } from 'sonner';
 import './globals.css';
+import { ThemeProvider } from '@/contexts/theme-context';
+import { AuthProvider } from '@/contexts/auth-context';
+import { AuthInitializer } from '@/components/auth/AuthInitializer';
+import { getCurrentUser } from '@/lib/auth/auth-service';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -14,61 +17,37 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: {
-    default: 'Dom Vlog - AI 기반 개인 기술 블로그',
-    template: '%s | Dom Vlog',
-  },
-  description:
-    'AI 기능이 내장된 개인 기술 블로그 플랫폼. 자동 스타일링, SEO 최적화, 카테고리 추천 기능을 제공합니다.',
-  keywords: [
-    '기술블로그',
-    'AI',
-    'SEO',
-    '개발자',
-    '프로그래밍',
-    'Next.js',
-    'Supabase',
-  ],
-  authors: [{ name: 'Dom' }],
-  creator: 'Dom',
-  openGraph: {
-    type: 'website',
-    locale: 'ko_KR',
-    url: process.env.NEXT_PUBLIC_APP_URL || 'https://domvlog.com',
-    siteName: 'Dom Vlog',
-    title: 'Dom Vlog - AI 기반 개인 기술 블로그',
-    description: 'AI 기능이 내장된 개인 기술 블로그 플랫폼',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Dom Vlog - AI 기반 개인 기술 블로그',
-    description: 'AI 기능이 내장된 개인 기술 블로그 플랫폼',
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
-  },
+  title: 'Dom Vlog',
+  description: 'AI 기능이 내장된 개인 기술 블로그 플랫폼',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await getCurrentUser();
+  const serverSession = session.success
+    ? {
+        user: session.data,
+        session: session.data, // Simplified for this context
+        isAuthenticated: !!session.data,
+        isLoading: false,
+        isInitialized: true,
+      }
+    : null;
+
   return (
-    <html lang="ko" suppressHydrationWarning>
+    <html lang="ko" className="dark">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning
       >
-        {children}
-        <Toaster position="top-right" expand={false} richColors closeButton />
+        <ThemeProvider>
+          <AuthProvider serverSession={serverSession as any}>
+            <AuthInitializer>{children}</AuthInitializer>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

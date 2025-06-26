@@ -24,7 +24,7 @@ export function ImageUpload({
   acceptedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
   className,
   disabled = false,
-  placeholder = '이미지를 선택하거나 드래그하여 업로드하세요',
+  placeholder: _placeholder = '이미지를 선택하거나 드래그하여 업로드하세요',
 }: ImageUploadProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -103,7 +103,7 @@ export function ImageUpload({
         setUploadProgress(0);
       }
     },
-    [onUpload, maxSize, acceptedTypes, preview]
+    [onUpload, maxSize, acceptedTypes, preview, validateFile]
   );
 
   // 드래그 앤 드롭 핸들러
@@ -177,8 +177,8 @@ export function ImageUpload({
     <div className={cn('space-y-4', className)}>
       {/* 현재 이미지 미리보기 */}
       {displayImage && !isUploading && (
-        <div className="relative group">
-          <div className="aspect-square w-32 h-32 mx-auto rounded-full overflow-hidden border-4 border-gray-200">
+        <div className="relative group w-fit mx-auto">
+          <div className="aspect-square w-24 h-24 rounded-full overflow-hidden border-4 border-gray-200 dark:border-gray-600">
             <img
               src={displayImage}
               alt="프로필 이미지"
@@ -190,11 +190,11 @@ export function ImageUpload({
               type="button"
               variant="destructive"
               size="sm"
-              className="absolute top-0 right-0 rounded-full w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute -top-2 -right-2 rounded-full w-6 h-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={handleRemove}
               disabled={disabled}
             >
-              <X className="h-4 w-4" />
+              <X className="h-3 w-3" />
             </Button>
           )}
         </div>
@@ -202,17 +202,17 @@ export function ImageUpload({
 
       {/* 업로드 진행률 */}
       {isUploading && (
-        <div className="space-y-2">
-          <div className="aspect-square w-32 h-32 mx-auto rounded-full overflow-hidden border-4 border-gray-200 bg-gray-100 flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <div className="space-y-3 w-fit mx-auto">
+          <div className="aspect-square w-24 h-24 rounded-full overflow-hidden border-4 border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
             <div
               className="bg-blue-600 h-2 rounded-full transition-all duration-300"
               style={{ width: `${uploadProgress}%` }}
             />
           </div>
-          <p className="text-sm text-center text-gray-600">
+          <p className="text-xs text-center text-gray-600 dark:text-gray-400">
             업로드 중... {uploadProgress}%
           </p>
         </div>
@@ -220,24 +220,27 @@ export function ImageUpload({
 
       {/* 업로드 영역 */}
       {!displayImage && !isUploading && (
-        <div
-          className={cn(
-            'border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors',
-            isDragOver
-              ? 'border-blue-500 bg-blue-50'
-              : 'border-gray-300 hover:border-gray-400',
-            disabled && 'opacity-50 cursor-not-allowed'
-          )}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={handleClick}
-        >
-          <ImageIcon className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-          <p className="text-sm text-gray-600 mb-2">{placeholder}</p>
-          <p className="text-xs text-gray-500">
-            최대 {(maxSize / (1024 * 1024)).toFixed(1)}MB,{' '}
-            {acceptedTypes.join(', ')}
+        <div className="w-fit mx-auto">
+          <div
+            className={cn(
+              'border-2 border-dashed rounded-full w-24 h-24 flex flex-col items-center justify-center cursor-pointer transition-colors',
+              isDragOver
+                ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20'
+                : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500',
+              disabled && 'opacity-50 cursor-not-allowed'
+            )}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={handleClick}
+          >
+            <ImageIcon className="h-6 w-6 text-gray-400 mb-1" />
+            <p className="text-xs text-gray-500 dark:text-gray-400 text-center px-2">
+              이미지 선택
+            </p>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
+            최대 {(maxSize / (1024 * 1024)).toFixed(1)}MB
           </p>
         </div>
       )}
@@ -261,10 +264,10 @@ export function ImageUpload({
             size="sm"
             onClick={handleClick}
             disabled={disabled}
-            className="gap-2"
+            className="gap-2 text-xs"
           >
-            <Upload className="h-4 w-4" />
-            {currentImage ? '이미지 변경' : '이미지 선택'}
+            <Upload className="h-3 w-3" />
+            {currentImage ? '변경' : '선택'}
           </Button>
           {currentImage && onRemove && (
             <Button
@@ -273,9 +276,9 @@ export function ImageUpload({
               size="sm"
               onClick={handleRemove}
               disabled={disabled}
-              className="gap-2 text-red-600 hover:text-red-700"
+              className="gap-2 text-red-600 hover:text-red-700 text-xs"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3 w-3" />
               제거
             </Button>
           )}
@@ -284,7 +287,7 @@ export function ImageUpload({
 
       {/* 에러 메시지 */}
       {error && (
-        <div className="text-sm text-red-600 text-center bg-red-50 p-2 rounded">
+        <div className="text-xs text-red-600 dark:text-red-400 text-center bg-red-50 dark:bg-red-950/20 p-2 rounded border border-red-200 dark:border-red-800">
           {error}
         </div>
       )}

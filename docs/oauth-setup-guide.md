@@ -1,6 +1,8 @@
 # OAuth 소셜 로그인 설정 가이드
 
-이 가이드는 Dom Vlog 프로젝트에 GitHub와 Google OAuth 로그인을 설정하는 방법을 설명합니다.
+## 개요
+
+Dom Vlog에서 Google과 GitHub OAuth 로그인을 설정하는 방법을 안내합니다.
 
 ## 🚀 구현된 기능
 
@@ -18,27 +20,54 @@
 
 ## 🔧 1. Supabase OAuth 설정
 
-### 1.1 Supabase Dashboard 접근
+### 1.1 Supabase Dashboard 접속
 
-1. [Supabase Dashboard](https://supabase.com/dashboard) 접속
+1. [Supabase Dashboard](https://supabase.com/dashboard)에 로그인
 2. 프로젝트 선택
-3. `Authentication` > `Providers` 메뉴 이동
+3. 좌측 메뉴에서 `Authentication` > `Providers` 클릭
 
-### 1.2 GitHub Provider 활성화
+### 1.2 Google OAuth 설정
 
-1. `GitHub` 섹션에서 **Enable** 토글 활성화
-2. 다음 설정 입력:
-   - **Client ID**: GitHub OAuth App의 Client ID
-   - **Client Secret**: GitHub OAuth App의 Client Secret
-3. `Save` 클릭
+#### Google Cloud Console에서 OAuth 앱 생성
 
-### 1.3 Google Provider 활성화
+1. [Google Cloud Console](https://console.cloud.google.com/)에 접속
+2. 프로젝트 생성 또는 기존 프로젝트 선택
+3. `APIs & Services` > `Credentials` 이동
+4. `+ CREATE CREDENTIALS` > `OAuth 2.0 Client IDs` 선택
+5. Application type: `Web application` 선택
+6. Name: `Dom Vlog` 입력
+7. Authorized redirect URIs에 추가:
+   ```
+   https://your-project-id.supabase.co/auth/v1/callback
+   ```
+8. `CREATE` 클릭하여 Client ID와 Client Secret 획득
 
-1. `Google` 섹션에서 **Enable** 토글 활성화
-2. 다음 설정 입력:
-   - **Client ID**: Google OAuth Client ID
-   - **Client Secret**: Google OAuth Client Secret
-3. `Save` 클릭
+#### Supabase에서 Google Provider 활성화
+
+1. Supabase Dashboard > Authentication > Providers
+2. Google 토글 활성화
+3. Client ID와 Client Secret 입력
+4. `Save` 클릭
+
+### 1.3 GitHub OAuth 설정
+
+#### GitHub OAuth App 생성
+
+1. [GitHub Settings](https://github.com/settings/developers)에 접속
+2. `OAuth Apps` > `New OAuth App` 클릭
+3. 다음 정보 입력:
+   - Application name: `Dom Vlog`
+   - Homepage URL: `http://localhost:3000` (개발용) 또는 실제 도메인
+   - Authorization callback URL: `https://your-project-id.supabase.co/auth/v1/callback`
+4. `Register application` 클릭
+5. Client ID와 Client Secret 확인
+
+#### Supabase에서 GitHub Provider 활성화
+
+1. Supabase Dashboard > Authentication > Providers
+2. GitHub 토글 활성화
+3. Client ID와 Client Secret 입력
+4. `Save` 클릭
 
 ## 🐙 2. GitHub OAuth App 생성
 
@@ -108,6 +137,9 @@ GITHUB_CLIENT_SECRET=your_github_client_secret
 # Google OAuth
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
+
+# 사용자 이메일 설정
+ALLOWED_USER_EMAILS=your-email@example.com
 ```
 
 ### 4.2 프로덕션 환경 설정

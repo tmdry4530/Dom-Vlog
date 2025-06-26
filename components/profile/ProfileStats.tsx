@@ -4,17 +4,17 @@ import { useState, useEffect } from 'react';
 import {
   BarChart3,
   Eye,
-  Heart,
+  // Heart,
   MessageCircle,
   TrendingUp,
-  Users,
-  Calendar,
   Share2,
+  AlertCircle,
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { useProfileStats } from '@/hooks';
 
 export interface ProfileStatsData {
   profileViews: {
@@ -50,59 +50,16 @@ export interface ProfileStatsData {
   }>;
 }
 
-export interface ProfileStatsProps {
-  data?: ProfileStatsData;
-  isLoading?: boolean;
-}
+// export interface ProfileStatsProps {
+//   // props는 더 이상 필요 없음 - 내부에서 데이터를 fetch
+// }
 
-// 모의 데이터 (실제로는 API에서 가져올 데이터)
-const mockStatsData: ProfileStatsData = {
-  profileViews: {
-    total: 2847,
-    thisWeek: 156,
-    percentage: 12.3,
-  },
-  socialStats: {
-    followers: 89,
-    following: 142,
-    connections: 67,
-  },
-  activity: {
-    postsPublished: 24,
-    commentsReceived: 187,
-    likesReceived: 523,
-    sharesReceived: 89,
-  },
-  engagement: {
-    averageViews: 127,
-    averageLikes: 21,
-    engagementRate: 16.5,
-  },
-  topSkills: [
-    { name: 'TypeScript', level: 95, mentions: 12 },
-    { name: 'React', level: 90, mentions: 18 },
-    { name: 'Next.js', level: 85, mentions: 8 },
-    { name: 'Node.js', level: 80, mentions: 6 },
-    { name: 'Blockchain', level: 75, mentions: 4 },
-  ],
-  recentActivity: [
-    { type: 'view', count: 23, date: '2024-01-15' },
-    { type: 'like', count: 12, date: '2024-01-14' },
-    { type: 'comment', count: 5, date: '2024-01-14' },
-    { type: 'follow', count: 3, date: '2024-01-13' },
-    { type: 'view', count: 31, date: '2024-01-12' },
-  ],
-};
-
-export function ProfileStats({
-  data = mockStatsData,
-  isLoading = false,
-}: ProfileStatsProps) {
+export function ProfileStats() {
+  const { data, isLoading, error } = useProfileStats();
   const [animatedValues, setAnimatedValues] = useState({
     profileViews: 0,
-    followers: 0,
     postsPublished: 0,
-    likesReceived: 0,
+    sharesReceived: 0,
   });
 
   // 숫자 애니메이션 효과
@@ -121,12 +78,11 @@ export function ProfileStats({
 
         setAnimatedValues({
           profileViews: Math.round(data.profileViews.total * easeOutProgress),
-          followers: Math.round(data.socialStats.followers * easeOutProgress),
           postsPublished: Math.round(
             data.activity.postsPublished * easeOutProgress
           ),
-          likesReceived: Math.round(
-            data.activity.likesReceived * easeOutProgress
+          sharesReceived: Math.round(
+            data.activity.sharesReceived * easeOutProgress
           ),
         });
 
@@ -139,54 +95,28 @@ export function ProfileStats({
     }
   }, [data, isLoading]);
 
-  const formatNumber = (num: number) => {
-    if (num >= 1000) {
-      return `${(num / 1000).toFixed(1)}k`;
-    }
-    return num.toString();
-  };
+  // const formatNumber = (num: number) => {
+  //   if (num >= 1000) {
+  //     return `${(num / 1000).toFixed(1)}k`;
+  //   }
+  //   return num.toString();
+  // };
 
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'view':
-        return <Eye className="h-3 w-3" />;
-      case 'like':
-        return <Heart className="h-3 w-3" />;
-      case 'comment':
-        return <MessageCircle className="h-3 w-3" />;
-      case 'follow':
-        return <Users className="h-3 w-3" />;
-      default:
-        return <BarChart3 className="h-3 w-3" />;
-    }
-  };
-
-  const getActivityLabel = (type: string) => {
-    switch (type) {
-      case 'view':
-        return '조회';
-      case 'like':
-        return '좋아요';
-      case 'comment':
-        return '댓글';
-      case 'follow':
-        return '팔로우';
-      default:
-        return '활동';
-    }
-  };
-
+  // 로딩 상태
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {Array.from({ length: 6 }).map((_, i) => (
-          <Card key={i} className="animate-pulse">
+          <Card
+            key={i}
+            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm animate-pulse"
+          >
             <CardHeader className="pb-2">
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-1/2"></div>
             </CardHeader>
             <CardContent>
-              <div className="h-8 bg-gray-200 rounded w-1/3 mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+              <div className="h-8 bg-gray-200 dark:bg-gray-600 rounded w-1/3 mb-2"></div>
+              <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-2/3"></div>
             </CardContent>
           </Card>
         ))}
@@ -194,196 +124,201 @@ export function ProfileStats({
     );
   }
 
+  // 에러 상태
+  if (error) {
+    return (
+      <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-center p-8 text-center">
+            <div className="space-y-3">
+              <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                통계를 불러올 수 없습니다
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {error}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // 데이터가 없는 경우
+  if (!data) {
+    return (
+      <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-center p-8 text-center">
+            <div className="space-y-3">
+              <BarChart3 className="h-12 w-12 text-gray-400 mx-auto" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                통계 데이터가 없습니다
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                게시글을 작성하면 통계가 표시됩니다.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* 주요 지표 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* 프로필 조회수 */}
-        <Card>
+        <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">프로필 조회수</CardTitle>
-            <Eye className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              총 조회수
+            </CardTitle>
+            <Eye className="h-4 w-4 text-blue-600 dark:text-blue-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {formatNumber(animatedValues.profileViews)}
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {animatedValues.profileViews.toLocaleString()}
             </div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <TrendingUp className="h-3 w-3 text-green-600" />
-              <span className="text-green-600">
-                +{data.profileViews.percentage}%
-              </span>
-              <span>이번 주</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 팔로워 */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">팔로워</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{animatedValues.followers}</div>
-            <p className="text-xs text-muted-foreground">
-              {data.socialStats.following}명 팔로잉
+            <p className="text-xs text-green-600 dark:text-green-400">
+              +{data.profileViews.percentage}% 이번 주
             </p>
           </CardContent>
         </Card>
 
         {/* 게시글 */}
-        <Card>
+        <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">게시글</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              게시글
+            </CardTitle>
+            <BarChart3 className="h-4 w-4 text-green-600 dark:text-green-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
               {animatedValues.postsPublished}
             </div>
-            <p className="text-xs text-muted-foreground">
-              평균 {data.engagement.averageViews}회 조회
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              평균 조회수 {data.engagement.averageViews}
             </p>
           </CardContent>
         </Card>
 
-        {/* 총 좋아요 */}
-        <Card>
+        {/* 공유 */}
+        <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">총 좋아요</CardTitle>
-            <Heart className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              공유
+            </CardTitle>
+            <Share2 className="h-4 w-4 text-purple-600 dark:text-purple-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {formatNumber(animatedValues.likesReceived)}
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {animatedValues.sharesReceived}
             </div>
-            <p className="text-xs text-muted-foreground">
-              {data.engagement.engagementRate}% 참여율
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              참여율 {data.engagement.engagementRate}%
             </p>
           </CardContent>
         </Card>
       </div>
 
+      {/* 상세 통계 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 상위 기술 스택 */}
-        <Card>
+        {/* 활동 통계 */}
+        <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
           <CardHeader>
-            <CardTitle>상위 기술 스택</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              게시글에서 언급된 빈도 기준
+            <CardTitle className="text-gray-900 dark:text-white">
+              활동 통계
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <MessageCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  댓글
+                </span>
+              </div>
+              <div className="text-right">
+                <div className="font-semibold text-gray-900 dark:text-white">
+                  {data.activity.commentsReceived}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Share2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  공유
+                </span>
+              </div>
+              <div className="text-right">
+                <div className="font-semibold text-gray-900 dark:text-white">
+                  {data.activity.sharesReceived}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <TrendingUp className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  평균 참여율
+                </span>
+              </div>
+              <div className="text-right">
+                <div className="font-semibold text-gray-900 dark:text-white">
+                  {data.engagement.engagementRate}%
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 기술 스택 레벨 */}
+        <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-gray-900 dark:text-white">
+              기술 스택 분석
+            </CardTitle>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              게시글 내용 기반 분석
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
-            {data.topSkills.map((skill, index) => (
-              <div key={skill.name} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">{skill.name}</span>
-                    <Badge variant="secondary" className="text-xs">
-                      {skill.mentions}회 언급
-                    </Badge>
+            {data.topSkills.length > 0 ? (
+              data.topSkills.map((skill) => (
+                <div key={skill.name} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      {skill.name}
+                    </span>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        {skill.level}%
+                      </span>
+                      <Badge className="bg-transparent border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 font-medium text-xs">
+                        {skill.mentions}회 언급
+                      </Badge>
+                    </div>
                   </div>
-                  <span className="text-sm text-muted-foreground">
-                    {skill.level}%
-                  </span>
+                  <Progress value={skill.level} className="h-2" />
                 </div>
-                <Progress value={skill.level} className="h-2" />
+              ))
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  게시글을 작성하면 기술 스택 분석이 표시됩니다.
+                </p>
               </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* 최근 활동 */}
-        <Card>
-          <CardHeader>
-            <CardTitle>최근 활동</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              지난 7일간의 활동 내역
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {data.recentActivity.map((activity, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between py-2"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gray-100 rounded-full">
-                      {getActivityIcon(activity.type)}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">
-                        {getActivityLabel(activity.type)} {activity.count}회
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(activity.date).toLocaleDateString('ko-KR', {
-                          month: 'short',
-                          day: 'numeric',
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
-
-      {/* 참여 통계 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>참여 통계</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            전체 활동에 대한 상세 분석
-          </p>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">
-                {data.activity.commentsReceived}
-              </div>
-              <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
-                <MessageCircle className="h-3 w-3" />
-                받은 댓글
-              </div>
-            </div>
-
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">
-                {data.activity.likesReceived}
-              </div>
-              <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
-                <Heart className="h-3 w-3" />
-                받은 좋아요
-              </div>
-            </div>
-
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">
-                {data.activity.sharesReceived}
-              </div>
-              <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
-                <Share2 className="h-3 w-3" />
-                공유됨
-              </div>
-            </div>
-
-            <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">
-                {data.socialStats.connections}
-              </div>
-              <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
-                <Users className="h-3 w-3" />
-                연결
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

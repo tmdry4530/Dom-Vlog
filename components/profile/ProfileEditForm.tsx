@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -8,11 +8,17 @@ import {
   Loader2,
   Save,
   X,
-  Plus,
+  // Plus,
   User,
   Globe,
-  MapPin,
+  // MapPin,
   Settings,
+  Github,
+  Twitter,
+  Linkedin,
+  Instagram,
+  Link,
+  ExternalLink,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -20,9 +26,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+// import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
+// import { Separator } from '@/components/ui/separator';
 import { ImageUpload } from '@/components/ui/ImageUpload';
 
 import { useProfile } from '@/hooks/useProfile';
@@ -30,7 +36,7 @@ import type { Profile, UpdateProfileData } from '@/hooks/useProfile';
 
 // 프로필 폼 유효성 검사 스키마
 const profileSchema = z.object({
-  name: z
+  displayName: z
     .string()
     .min(2, '이름은 최소 2자 이상이어야 합니다')
     .max(50, '이름은 50자 이하여야 합니다'),
@@ -41,12 +47,6 @@ const profileSchema = z.object({
     .optional()
     .or(z.literal('')),
   location: z.string().max(100, '위치는 100자 이하여야 합니다').optional(),
-  skills: z
-    .array(z.string())
-    .max(20, '기술 스택은 최대 20개까지 추가할 수 있습니다'),
-  interests: z
-    .array(z.string())
-    .max(20, '관심사는 최대 20개까지 추가할 수 있습니다'),
   socialLinks: z
     .object({
       github: z
@@ -82,20 +82,105 @@ const profileSchema = z.object({
 
 type ProfileFormData = z.infer<typeof profileSchema>;
 
+// 소셜 링크에서 사용자명 추출 함수
+const getUsername = (url: string, platform: string): string => {
+  if (!url) return '';
+
+  try {
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname;
+
+    switch (platform) {
+      case 'github':
+        return pathname.replace('/', '') || '';
+      case 'twitter':
+        return pathname.replace('/', '') || '';
+      case 'linkedin':
+        return pathname.replace('/in/', '') || '';
+      case 'instagram':
+        return pathname.replace('/', '') || '';
+      default:
+        return '';
+    }
+  } catch {
+    // URL이 아닌 경우 사용자명으로 간주
+    return url;
+  }
+};
+
+// 소셜 링크 입력 컴포넌트
+interface SocialLinkInputProps {
+  icon: React.ReactNode;
+  label: string;
+  baseUrl: string;
+  placeholder: string;
+  value: string;
+  onChange: (username: string) => void;
+  fullUrl: string;
+  error?: string;
+}
+
+const SocialLinkInput = ({
+  icon,
+  label,
+  baseUrl,
+  placeholder,
+  value,
+  onChange,
+  fullUrl,
+  error,
+}: SocialLinkInputProps) => {
+  return (
+    <div className="space-y-2">
+      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+        {icon}
+        {label}
+      </Label>
+      <div className="relative">
+        <div className="flex">
+          <span className="inline-flex items-center px-3 text-sm text-gray-500 bg-gray-50 dark:bg-gray-700 border border-r-0 border-gray-300 dark:border-gray-600 rounded-l-md">
+            {baseUrl}
+          </span>
+          <Input
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="rounded-l-none bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"
+            placeholder={placeholder}
+          />
+        </div>
+        {fullUrl && (
+          <div className="mt-2 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+            <Link className="h-3 w-3" />
+            <a
+              href={fullUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1"
+            >
+              {fullUrl}
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
+        )}
+      </div>
+      {error && (
+        <p className="text-sm text-red-600 dark:text-red-400 mt-1">{error}</p>
+      )}
+    </div>
+  );
+};
+
 export interface ProfileEditFormProps {
   onSave?: (profile: Profile) => void;
   onCancel?: () => void;
 }
 
 export function ProfileEditForm({ onSave, onCancel }: ProfileEditFormProps) {
-  const [newSkill, setNewSkill] = useState('');
-  const [newInterest, setNewInterest] = useState('');
-
   const {
     profile,
     isLoading,
     error,
-    uploadProgress,
+    uploadProgress: _uploadProgress,
     updateProfile,
     uploadAvatar,
     deleteAvatar,
@@ -113,12 +198,10 @@ export function ProfileEditForm({ onSave, onCancel }: ProfileEditFormProps) {
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: profile?.name || '',
+      displayName: profile?.displayName || '',
       bio: profile?.bio || '',
       website: profile?.website || '',
       location: profile?.location || '',
-      skills: profile?.skills || [],
-      interests: profile?.interests || [],
       socialLinks: {
         github: profile?.socialLinks?.github || '',
         twitter: profile?.socialLinks?.twitter || '',
@@ -140,12 +223,10 @@ export function ProfileEditForm({ onSave, onCancel }: ProfileEditFormProps) {
   useEffect(() => {
     if (profile) {
       reset({
-        name: profile.name,
+        displayName: profile.displayName,
         bio: profile.bio || '',
         website: profile.website || '',
         location: profile.location || '',
-        skills: profile.skills,
-        interests: profile.interests,
         socialLinks: {
           github: profile.socialLinks?.github || '',
           twitter: profile.socialLinks?.twitter || '',
@@ -164,12 +245,10 @@ export function ProfileEditForm({ onSave, onCancel }: ProfileEditFormProps) {
   // 폼 제출
   const onSubmit = async (data: ProfileFormData) => {
     const updateData: UpdateProfileData = {
-      name: data.name,
+      displayName: data.displayName,
       bio: data.bio || undefined,
       website: data.website || undefined,
       location: data.location || undefined,
-      skills: data.skills,
-      interests: data.interests,
       socialLinks: {
         github: data.socialLinks?.github || undefined,
         twitter: data.socialLinks?.twitter || undefined,
@@ -186,50 +265,11 @@ export function ProfileEditForm({ onSave, onCancel }: ProfileEditFormProps) {
     }
   };
 
-  // 기술 스택 추가
-  const addSkill = () => {
-    const trimmedSkill = newSkill.trim();
-    if (trimmedSkill && !formData.skills.includes(trimmedSkill)) {
-      setValue('skills', [...formData.skills, trimmedSkill], {
-        shouldDirty: true,
-      });
-      setNewSkill('');
-    }
-  };
-
-  // 기술 스택 제거
-  const removeSkill = (skillToRemove: string) => {
-    setValue(
-      'skills',
-      formData.skills.filter((skill) => skill !== skillToRemove),
-      { shouldDirty: true }
-    );
-  };
-
-  // 관심사 추가
-  const addInterest = () => {
-    const trimmedInterest = newInterest.trim();
-    if (trimmedInterest && !formData.interests.includes(trimmedInterest)) {
-      setValue('interests', [...formData.interests, trimmedInterest], {
-        shouldDirty: true,
-      });
-      setNewInterest('');
-    }
-  };
-
-  // 관심사 제거
-  const removeInterest = (interestToRemove: string) => {
-    setValue(
-      'interests',
-      formData.interests.filter((interest) => interest !== interestToRemove),
-      { shouldDirty: true }
-    );
-  };
-
   // 아바타 업로드
   const handleAvatarUpload = async (file: File) => {
     const result = await uploadAvatar(file);
     if (result) {
+      // 아바타 업로드 성공 시 UI 업데이트는 useProfile 훅에서 처리
       return result;
     }
     throw new Error('아바타 업로드에 실패했습니다.');
@@ -240,414 +280,325 @@ export function ProfileEditForm({ onSave, onCancel }: ProfileEditFormProps) {
     await deleteAvatar();
   };
 
-  if (!profile) {
+  // 에러 메시지 컴포넌트
+  const ErrorMessage = ({ message }: { message?: string }) => {
+    if (!message) return null;
     return (
-      <div className="flex justify-center items-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <p className="text-sm text-red-600 dark:text-red-400 mt-1">{message}</p>
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-        {/* 헤더 */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">프로필 편집</h1>
-            <p className="text-gray-600 mt-1">개인 정보와 설정을 관리하세요</p>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              type="submit"
-              disabled={isLoading || !isDirty}
-              className="min-w-[100px]"
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  저장
-                </>
-              )}
-            </Button>
-            {onCancel && (
-              <Button type="button" variant="ghost" onClick={onCancel}>
-                취소
-              </Button>
-            )}
-          </div>
+    <div className="space-y-6">
+      {/* 전역 에러 메시지 */}
+      {error && (
+        <div className="p-4 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded-lg">
+          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearError}
+            className="mt-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+          >
+            <X className="h-4 w-4 mr-1" />
+            닫기
+          </Button>
         </div>
+      )}
 
-        {/* 에러 표시 */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex justify-between items-start">
-              <div>
-                <div className="text-red-600 font-medium">
-                  오류가 발생했습니다
-                </div>
-                <div className="text-red-500 text-sm mt-1">{error}</div>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={clearError}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* 좌측: 아바타 및 기본 정보 */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* 아바타 */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  프로필 이미지
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+        {/* 기본 정보 */}
+        <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <CardHeader className="pb-6">
+            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
+              <User className="h-5 w-5" />
+              기본 정보
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* 아바타 업로드 */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                프로필 사진
+              </Label>
+              <div className="flex justify-center">
                 <ImageUpload
-                  currentImage={profile.avatar}
+                  currentImage={profile?.avatar}
                   onUpload={handleAvatarUpload}
                   onRemove={handleAvatarDelete}
-                  placeholder="프로필 이미지를 업로드하세요"
                 />
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            {/* 설정 */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-4 w-4" />
-                  설정
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>이메일 알림</Label>
-                    <p className="text-sm text-gray-500">
-                      새로운 댓글이나 알림을 이메일로 받습니다
-                    </p>
-                  </div>
-                  <Switch
-                    checked={formData.settings?.emailNotifications}
-                    onCheckedChange={(checked) =>
-                      setValue('settings.emailNotifications', checked, {
-                        shouldDirty: true,
-                      })
-                    }
-                  />
-                </div>
+            {/* 이름 */}
+            <div className="space-y-2">
+              <Label
+                htmlFor="displayName"
+                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
+                이름 *
+              </Label>
+              <Input
+                id="displayName"
+                {...register('displayName')}
+                className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"
+                placeholder="이름을 입력하세요"
+              />
+              <ErrorMessage message={errors.displayName?.message} />
+            </div>
 
-                <Separator />
+            {/* 자기소개 */}
+            <div className="space-y-2">
+              <Label
+                htmlFor="bio"
+                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
+                자기소개
+              </Label>
+              <Textarea
+                id="bio"
+                {...register('bio')}
+                className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"
+                placeholder="자기소개를 입력하세요"
+                rows={3}
+              />
+              <ErrorMessage message={errors.bio?.message} />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {formData.bio?.length || 0}/500
+              </p>
+            </div>
 
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>공개 프로필</Label>
-                    <p className="text-sm text-gray-500">
-                      다른 사용자들이 프로필을 볼 수 있습니다
-                    </p>
-                  </div>
-                  <Switch
-                    checked={formData.settings?.publicProfile}
-                    onCheckedChange={(checked) =>
-                      setValue('settings.publicProfile', checked, {
-                        shouldDirty: true,
-                      })
-                    }
-                  />
-                </div>
+            {/* 웹사이트 */}
+            <div className="space-y-2">
+              <Label
+                htmlFor="website"
+                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
+                웹사이트
+              </Label>
+              <Input
+                id="website"
+                {...register('website')}
+                className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"
+                placeholder="https://example.com"
+              />
+              <ErrorMessage message={errors.website?.message} />
+            </div>
 
-                <Separator />
+            {/* 위치 */}
+            <div className="space-y-2">
+              <Label
+                htmlFor="location"
+                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
+                위치
+              </Label>
+              <Input
+                id="location"
+                {...register('location')}
+                className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"
+                placeholder="서울, 대한민국"
+              />
+              <ErrorMessage message={errors.location?.message} />
+            </div>
+          </CardContent>
+        </Card>
 
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>이메일 공개</Label>
-                    <p className="text-sm text-gray-500">
-                      프로필에서 이메일 주소를 공개합니다
-                    </p>
-                  </div>
-                  <Switch
-                    checked={formData.settings?.showEmail}
-                    onCheckedChange={(checked) =>
-                      setValue('settings.showEmail', checked, {
-                        shouldDirty: true,
-                      })
-                    }
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        {/* 소셜 링크 */}
+        <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <CardHeader className="pb-6">
+            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
+              <Globe className="h-5 w-5" />
+              소셜 링크
+            </CardTitle>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+              사용자명만 입력하시면 자동으로 전체 링크가 생성됩니다.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <SocialLinkInput
+              icon={<Github className="h-4 w-4" />}
+              label="GitHub"
+              baseUrl="https://github.com/"
+              placeholder="username"
+              value={getUsername(formData.socialLinks?.github || '', 'github')}
+              onChange={(username) => {
+                const fullUrl = username
+                  ? `https://github.com/${username}`
+                  : '';
+                setValue('socialLinks.github', fullUrl);
+              }}
+              fullUrl={formData.socialLinks?.github || ''}
+              error={errors.socialLinks?.github?.message}
+            />
 
-          {/* 우측: 상세 정보 */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* 기본 정보 */}
-            <Card>
-              <CardHeader>
-                <CardTitle>기본 정보</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* 이름 */}
-                <div className="space-y-2">
-                  <Label htmlFor="name">이름 *</Label>
-                  <Input
-                    id="name"
-                    {...register('name')}
-                    placeholder="이름을 입력하세요"
-                    className={errors.name ? 'border-red-500' : ''}
-                  />
-                  {errors.name && (
-                    <p className="text-sm text-red-600">
-                      {errors.name.message}
-                    </p>
-                  )}
-                </div>
+            <SocialLinkInput
+              icon={<Twitter className="h-4 w-4" />}
+              label="Twitter / X"
+              baseUrl="https://twitter.com/"
+              placeholder="username"
+              value={getUsername(
+                formData.socialLinks?.twitter || '',
+                'twitter'
+              )}
+              onChange={(username) => {
+                const fullUrl = username
+                  ? `https://twitter.com/${username}`
+                  : '';
+                setValue('socialLinks.twitter', fullUrl);
+              }}
+              fullUrl={formData.socialLinks?.twitter || ''}
+              error={errors.socialLinks?.twitter?.message}
+            />
 
-                {/* 자기소개 */}
-                <div className="space-y-2">
-                  <Label htmlFor="bio">자기소개</Label>
-                  <Textarea
-                    id="bio"
-                    {...register('bio')}
-                    placeholder="자신을 소개해보세요..."
-                    className={errors.bio ? 'border-red-500' : ''}
-                    rows={4}
-                  />
-                  {errors.bio && (
-                    <p className="text-sm text-red-600">{errors.bio.message}</p>
-                  )}
-                </div>
+            <SocialLinkInput
+              icon={<Linkedin className="h-4 w-4" />}
+              label="LinkedIn"
+              baseUrl="https://linkedin.com/in/"
+              placeholder="username"
+              value={getUsername(
+                formData.socialLinks?.linkedin || '',
+                'linkedin'
+              )}
+              onChange={(username) => {
+                const fullUrl = username
+                  ? `https://linkedin.com/in/${username}`
+                  : '';
+                setValue('socialLinks.linkedin', fullUrl);
+              }}
+              fullUrl={formData.socialLinks?.linkedin || ''}
+              error={errors.socialLinks?.linkedin?.message}
+            />
 
-                {/* 웹사이트 */}
-                <div className="space-y-2">
-                  <Label htmlFor="website" className="flex items-center gap-2">
-                    <Globe className="h-4 w-4" />
-                    웹사이트
-                  </Label>
-                  <Input
-                    id="website"
-                    {...register('website')}
-                    placeholder="https://example.com"
-                    className={errors.website ? 'border-red-500' : ''}
-                  />
-                  {errors.website && (
-                    <p className="text-sm text-red-600">
-                      {errors.website.message}
-                    </p>
-                  )}
-                </div>
+            <SocialLinkInput
+              icon={<Instagram className="h-4 w-4" />}
+              label="Instagram"
+              baseUrl="https://instagram.com/"
+              placeholder="username"
+              value={getUsername(
+                formData.socialLinks?.instagram || '',
+                'instagram'
+              )}
+              onChange={(username) => {
+                const fullUrl = username
+                  ? `https://instagram.com/${username}`
+                  : '';
+                setValue('socialLinks.instagram', fullUrl);
+              }}
+              fullUrl={formData.socialLinks?.instagram || ''}
+              error={errors.socialLinks?.instagram?.message}
+            />
+          </CardContent>
+        </Card>
 
-                {/* 위치 */}
-                <div className="space-y-2">
-                  <Label htmlFor="location" className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    위치
-                  </Label>
-                  <Input
-                    id="location"
-                    {...register('location')}
-                    placeholder="서울, 대한민국"
-                    className={errors.location ? 'border-red-500' : ''}
-                  />
-                  {errors.location && (
-                    <p className="text-sm text-red-600">
-                      {errors.location.message}
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+        {/* 개인정보 설정 */}
+        <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <CardHeader className="pb-6">
+            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
+              <Settings className="h-5 w-5" />
+              개인정보 설정
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="space-y-1">
+                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  이메일 알림
+                </Label>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  새로운 활동에 대한 이메일 알림을 받습니다
+                </p>
+              </div>
+              <Switch
+                checked={formData.settings?.emailNotifications}
+                onCheckedChange={(checked) =>
+                  setValue('settings.emailNotifications', checked, {
+                    shouldDirty: true,
+                  })
+                }
+              />
+            </div>
 
-            {/* 기술 스택 */}
-            <Card>
-              <CardHeader>
-                <CardTitle>기술 스택</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-wrap gap-2">
-                  {formData.skills.map((skill) => (
-                    <Badge
-                      key={skill}
-                      variant="secondary"
-                      className="cursor-pointer"
-                      onClick={() => removeSkill(skill)}
-                    >
-                      {skill} <X className="h-3 w-3 ml-1" />
-                    </Badge>
-                  ))}
-                </div>
+            <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="space-y-1">
+                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  공개 프로필
+                </Label>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  다른 사용자가 프로필을 볼 수 있습니다
+                </p>
+              </div>
+              <Switch
+                checked={formData.settings?.publicProfile}
+                onCheckedChange={(checked) =>
+                  setValue('settings.publicProfile', checked, {
+                    shouldDirty: true,
+                  })
+                }
+              />
+            </div>
 
-                <div className="flex gap-2">
-                  <Input
-                    value={newSkill}
-                    onChange={(e) => setNewSkill(e.target.value)}
-                    placeholder="새 기술 추가"
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addSkill();
-                      }
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addSkill}
-                    disabled={!newSkill.trim() || formData.skills.length >= 20}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
+            <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="space-y-1">
+                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  이메일 주소 공개
+                </Label>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  프로필에 이메일 주소를 표시합니다
+                </p>
+              </div>
+              <Switch
+                checked={formData.settings?.showEmail}
+                onCheckedChange={(checked) =>
+                  setValue('settings.showEmail', checked, { shouldDirty: true })
+                }
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-                {errors.skills && (
-                  <p className="text-sm text-red-600">
-                    {errors.skills.message}
-                  </p>
+        {/* 액션 버튼 */}
+        <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <CardContent className="pt-6">
+            <div className="flex justify-end gap-3">
+              {onCancel && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onCancel}
+                  className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  취소
+                </Button>
+              )}
+              <Button
+                type="submit"
+                disabled={!isDirty || !isValid || isLoading}
+                className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    저장 중...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    변경 사항 저장
+                  </>
                 )}
-              </CardContent>
-            </Card>
-
-            {/* 관심사 */}
-            <Card>
-              <CardHeader>
-                <CardTitle>관심사</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-wrap gap-2">
-                  {formData.interests.map((interest) => (
-                    <Badge
-                      key={interest}
-                      variant="outline"
-                      className="cursor-pointer"
-                      onClick={() => removeInterest(interest)}
-                    >
-                      {interest} <X className="h-3 w-3 ml-1" />
-                    </Badge>
-                  ))}
-                </div>
-
-                <div className="flex gap-2">
-                  <Input
-                    value={newInterest}
-                    onChange={(e) => setNewInterest(e.target.value)}
-                    placeholder="새 관심사 추가"
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addInterest();
-                      }
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addInterest}
-                    disabled={
-                      !newInterest.trim() || formData.interests.length >= 20
-                    }
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                {errors.interests && (
-                  <p className="text-sm text-red-600">
-                    {errors.interests.message}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* 소셜 링크 */}
-            <Card>
-              <CardHeader>
-                <CardTitle>소셜 링크</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="github">GitHub</Label>
-                  <Input
-                    id="github"
-                    {...register('socialLinks.github')}
-                    placeholder="https://github.com/username"
-                    className={
-                      errors.socialLinks?.github ? 'border-red-500' : ''
-                    }
-                  />
-                  {errors.socialLinks?.github && (
-                    <p className="text-sm text-red-600">
-                      {errors.socialLinks.github.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="twitter">Twitter</Label>
-                  <Input
-                    id="twitter"
-                    {...register('socialLinks.twitter')}
-                    placeholder="https://twitter.com/username"
-                    className={
-                      errors.socialLinks?.twitter ? 'border-red-500' : ''
-                    }
-                  />
-                  {errors.socialLinks?.twitter && (
-                    <p className="text-sm text-red-600">
-                      {errors.socialLinks.twitter.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="linkedin">LinkedIn</Label>
-                  <Input
-                    id="linkedin"
-                    {...register('socialLinks.linkedin')}
-                    placeholder="https://linkedin.com/in/username"
-                    className={
-                      errors.socialLinks?.linkedin ? 'border-red-500' : ''
-                    }
-                  />
-                  {errors.socialLinks?.linkedin && (
-                    <p className="text-sm text-red-600">
-                      {errors.socialLinks.linkedin.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="instagram">Instagram</Label>
-                  <Input
-                    id="instagram"
-                    {...register('socialLinks.instagram')}
-                    placeholder="https://instagram.com/username"
-                    className={
-                      errors.socialLinks?.instagram ? 'border-red-500' : ''
-                    }
-                  />
-                  {errors.socialLinks?.instagram && (
-                    <p className="text-sm text-red-600">
-                      {errors.socialLinks.instagram.message}
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </form>
     </div>
   );

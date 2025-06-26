@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
       status: searchParams.get('status') || undefined,
       categoryId: searchParams.get('categoryId') || undefined,
       search: searchParams.get('search') || undefined,
+      slug: searchParams.get('slug') || undefined,
       dateFrom: searchParams.get('dateFrom') || undefined,
       dateTo: searchParams.get('dateTo') || undefined,
     };

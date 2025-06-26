@@ -67,6 +67,9 @@ export async function getPosts(
         { excerpt: { contains: filters.search, mode: 'insensitive' } },
       ];
     }
+    if (filters.slug) {
+      where.slug = filters.slug;
+    }
     if (filters.dateFrom || filters.dateTo) {
       where.createdAt = {};
       if (filters.dateFrom) where.createdAt.gte = new Date(filters.dateFrom);
