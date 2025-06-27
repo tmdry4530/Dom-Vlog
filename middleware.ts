@@ -44,6 +44,7 @@ function isPublicPath(pathname: string): boolean {
 }
 
 export async function middleware(request: NextRequest) {
+  // response 객체를 먼저 생성합니다.
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -78,16 +79,7 @@ export async function middleware(request: NextRequest) {
         return request.cookies.get(name)?.value;
       },
       set(name: string, value: string, options: Record<string, unknown>) {
-        request.cookies.set({
-          name,
-          value,
-          ...options,
-        });
-        response = NextResponse.next({
-          request: {
-            headers: request.headers,
-          },
-        });
+        // response 객체에 직접 쿠키를 설정합니다.
         response.cookies.set({
           name,
           value,
@@ -95,16 +87,7 @@ export async function middleware(request: NextRequest) {
         });
       },
       remove(name: string, options: Record<string, unknown>) {
-        request.cookies.set({
-          name,
-          value: '',
-          ...options,
-        });
-        response = NextResponse.next({
-          request: {
-            headers: request.headers,
-          },
-        });
+        // response 객체에 직접 쿠키를 설정합니다.
         response.cookies.set({
           name,
           value: '',
