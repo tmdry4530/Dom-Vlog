@@ -26,8 +26,12 @@ export interface UserSession {
 
 /**
  * 허용된 사용자인지 확인 (개인 블로그용 화이트리스트)
+ * 이메일 주소와 환경 변수에 등록된 이메일 목록을 비교합니다.
+ * 비교 시에는 양쪽 모두 모든 공백을 제거하고 소문자로 변환하여 일치 여부를 확인합니다.
+ * @param email 확인할 이메일 주소
+ * @returns 허용된 사용자인 경우 true, 그렇지 않으면 false
  */
-function isAllowedUser(email: string): boolean {
+export function isAllowedUser(email: string): boolean {
   const allowedEmails = process.env.ALLOWED_USER_EMAILS;
 
   if (!allowedEmails) {
@@ -35,13 +39,13 @@ function isAllowedUser(email: string): boolean {
     return false;
   }
 
-  // 쉼표로 구분된 이메일 목록 파싱 (공백 제거 및 소문자 변환)
+  // 쉼표로 구분된 이메일 목록 파싱 (각 이메일의 공백 제거 및 소문자 변환)
   const emailList = allowedEmails
     .split(',')
-    .map((e) => e.trim().toLowerCase())
+    .map((e) => e.trim().replace(/\s/g, '').toLowerCase()) // 이메일 자체 내의 공백도 제거
     .filter((e) => e.length > 0);
 
-  // 비교할 이메일도 모든 공백 제거 및 소문자 변환
+  // 비교할 입력 이메일도 모든 공백 제거 및 소문자 변환
   const normalizedUserEmail = email.replace(/\s/g, '').toLowerCase();
 
   return emailList.includes(normalizedUserEmail);
@@ -143,12 +147,22 @@ export async function handleOAuthCallback(
     }
 
     // 허용된 사용자인지 확인
-    if (!data.user.email || !isAllowedUser(data.user.email)) {
+    const userEmailForCheck = data.user.email;
+    console.log(
+      `[handleOAuthCallback] Checking if user is allowed. Email: ${userEmailForCheck}`
+    );
+    if (!userEmailForCheck || !isAllowedUser(userEmailForCheck)) {
+      console.log(
+        `[handleOAuthCallback] User not allowed or email missing. Email: ${userEmailForCheck}, isAllowed: ${
+          userEmailForCheck ? isAllowedUser(userEmailForCheck) : 'N/A'
+        }`
+      );
       return {
         success: false,
         error: '이 블로그에 접근할 권한이 없습니다.',
       };
     }
+    console.log('[handleOAuthCallback] User is allowed.');
 
     // 기존 프로필 확인 또는 생성
     let profile = await prisma.profile.findFirst({

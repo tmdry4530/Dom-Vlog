@@ -1,25 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
-
-/**
- * 허용된 사용자인지 확인 (개인 블로그용 화이트리스트)
- */
-function isAllowedUser(email: string): boolean {
-  const allowedEmails = process.env.ALLOWED_USER_EMAILS;
-
-  if (!allowedEmails) {
-    console.error('ALLOWED_USER_EMAILS 환경변수가 설정되지 않았습니다.');
-    return false;
-  }
-
-  // 쉼표로 구분된 이메일 목록 파싱
-  const emailList = allowedEmails
-    .split(',')
-    .map((email) => email.trim().toLowerCase())
-    .filter((email) => email.length > 0);
-
-  return emailList.includes(email.toLowerCase());
-}
+import { isAllowedUser } from '@/lib/auth/auth-service'; // isAllowedUser 임포트
 
 /**
  * 인증이 필요한 경로인지 확인
