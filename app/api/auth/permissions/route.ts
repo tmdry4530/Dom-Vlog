@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth/auth-service';
+import { getCurrentUser, isAllowedUser } from '@/lib/auth/auth-service';
 
 export async function GET(_request: NextRequest) {
   try {
@@ -28,42 +28,26 @@ export async function GET(_request: NextRequest) {
     const user = userResult.data;
     console.log('User found:', { id: user.id, email: user.email });
 
-    // 허용된 사용자인지 확인
-    const allowedEmails = process.env.ALLOWED_USER_EMAILS;
-    console.log('ALLOWED_USER_EMAILS env:', allowedEmails);
+    // isAllowedUser 함수를 auth-service에서 가져와 사용
+    const userEmailForCheck = user.email;
+    console.log(
+      `[Permissions API] User email from getCurrentUser: ${userEmailForCheck}`
+    );
 
-    let isAllowedUser = false;
-
-    if (allowedEmails && user.email) {
-      const emailList = allowedEmails
-        .split(',')
-        .map((email) => email.trim().toLowerCase())
-        .filter((email) => email.length > 0);
-
-      console.log('Email list from env:', emailList);
-      console.log('User email (original):', user.email);
-
-      // 사용자 이메일에서 모든 공백 제거 및 소문자 변환
-      const normalizedUserEmail = user.email.replace(/\s/g, '').toLowerCase();
-      console.log('User email (normalized):', normalizedUserEmail);
-
-      isAllowedUser = emailList.includes(normalizedUserEmail);
-      console.log('isAllowedUser (env-based):', isAllowedUser);
-    } else {
-      // ALLOWED_USER_EMAILS가 설정되지 않은 경우, 모든 인증된 사용자에게 권한 부여 (테스트용)
-      isAllowedUser = true;
-      console.log(
-        'ALLOWED_USER_EMAILS 환경변수가 설정되지 않아 모든 인증된 사용자에게 권한 부여'
-      );
-    }
+    const isUserAllowed = userEmailForCheck
+      ? isAllowedUser(userEmailForCheck)
+      : false;
+    console.log(
+      `[Permissions API] Calling isAllowedUser from auth-service. Email: ${userEmailForCheck}, Result: ${isUserAllowed}`
+    );
 
     // 허용된 사용자에게만 모든 권한 부여 (Phase 1: 개인 블로그)
     const permissions = {
-      canWrite: isAllowedUser,
-      canEdit: isAllowedUser,
-      canDelete: isAllowedUser,
-      canManage: isAllowedUser,
-      isAllowedUser,
+      canWrite: isUserAllowed,
+      canEdit: isUserAllowed,
+      canDelete: isUserAllowed,
+      canManage: isUserAllowed,
+      isAllowedUser: isUserAllowed, // 이 필드도 동일하게 설정
     };
 
     console.log('Final permissions:', permissions);
